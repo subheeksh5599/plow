@@ -8,7 +8,7 @@
 [![Sepolia: MockSkySavings](https://img.shields.io/badge/📜_Sepolia-MockSkySavings-14151a)](https://sepolia.etherscan.io/address/0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e)
 [![Sepolia: MockUSDC](https://img.shields.io/badge/📜_Sepolia-MockUSDC-14151a)](https://sepolia.etherscan.io/address/0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9)
 [![License: MIT](https://img.shields.io/badge/license-MIT-533afd.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-27%20passing-3fb950)
+![Tests](https://img.shields.io/badge/tests-28%20passing-3fb950)
 [![CI](https://img.shields.io/github/actions/workflow/status/subheeksh5599/plow/ci.yml?branch=main&label=CI)](https://github.com/subheeksh5599/plow/actions)
 ![Stack](https://img.shields.io/badge/Python%20·%20Solidity%20·%20Next.js-1f1f23)
 ![KeeperHub](https://img.shields.io/badge/KeeperHub-execution%20layer-533afd)
@@ -289,7 +289,7 @@ for APY context; they can never move funds.
 
 ## Tests
 
-**27 tests passing — 7 Foundry + 20 Python**, all green:
+**28 tests passing — 7 Foundry + 21 Python**, all green:
 
 ```
 === Foundry (contracts) ===
@@ -304,7 +304,7 @@ Ran 7 tests for test/Plow.t.sol:PlowTest
 Suite result: ok. 7 passed; 0 failed
 
 === Python (server) ===
-All tests passed — 20/20
+All tests passed — 21/21
 gate: unlisted DENY, disabled DENY, rank-only (no executable address) DENY,
 zero-amount DENY, cap DENY, simulate-revert DENY, fail-closed DENY, in-policy
 ALLOW, over-budget ESCALATE, active-window wraparound, intent-key determinism,
