@@ -6,9 +6,6 @@ node_modules/
 # build output
 frontend/out/
 frontend/.next/
-contracts/out/
-contracts/cache/
-contracts/broadcast/
 
 # local-only working docs (never pushed)
 /*checklist*.md
