@@ -4,7 +4,7 @@
 
 &nbsp;
 
-[![Live demo](https://img.shields.io/badge/●_live-plow.vercel.app-533afd)](https://plow.vercel.app)
+[![Live demo](https://img.shields.io/badge/●_live-plow-beta.vercel.app-533afd)](https://plow-beta.vercel.app)
 [![Sepolia: MockSkySavings](https://img.shields.io/badge/📜_Sepolia-MockSkySavings-14151a)](https://sepolia.etherscan.io/address/0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e)
 [![Sepolia: MockUSDC](https://img.shields.io/badge/📜_Sepolia-MockUSDC-14151a)](https://sepolia.etherscan.io/address/0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9)
 [![License: MIT](https://img.shields.io/badge/license-MIT-533afd.svg)](LICENSE)
@@ -19,9 +19,9 @@ Plow is the write path for agent-executed yield. It scans a wallet's stablecoin 
 ranks allowlisted venues by live APY, and deposits through KeeperHub — policy-gated,
 gas-sponsored, and verified onchain. Every decision lands in an audit trail.
 
-### ▶ Live now at **[plow.vercel.app](https://plow.vercel.app)**
+### ▶ Live now at **[plow-beta.vercel.app](https://plow-beta.vercel.app)**
 
-**[ Live demo ↗ ](https://plow.vercel.app)** · **[ MockSkySavings on Etherscan ↗ ](https://sepolia.etherscan.io/address/0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e)** · **[ MockUSDC on Etherscan ↗ ](https://sepolia.etherscan.io/address/0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9)** · **[ Transactions ↓ ](#transactions--the-evidence)** · **[ Run it locally ↓ ](#run-it-locally)**
+**[ Live demo ↗ ](https://plow-beta.vercel.app)** · **[ MockSkySavings on Etherscan ↗ ](https://sepolia.etherscan.io/address/0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e)** · **[ MockUSDC on Etherscan ↗ ](https://sepolia.etherscan.io/address/0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9)** · **[ Transactions ↓ ](#transactions--the-evidence)** · **[ Run it locally ↓ ](#run-it-locally)**
 
 Built for the **KeeperHub Agents Onchain Hackathon**. MIT licensed.
 
@@ -339,7 +339,7 @@ Point `PLOW_POLICY_PATH` at `server/policies.json` (venues + tokens config) and
 
 | | |
 |---|---|
-| **Frontend** | **[plow.vercel.app](https://plow.vercel.app)** — Vercel static export |
+| **Frontend** | **[plow-beta.vercel.app](https://plow-beta.vercel.app)** — Vercel static export |
 | **Server** | Vercel serverless function (`api/index.py` → ASGI `server.plow.app`), `KH_API_KEY` in env |
 | **Contracts** | MockSkySavings + MockUSDC on Sepolia via Foundry |
 
