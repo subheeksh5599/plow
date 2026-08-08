@@ -149,10 +149,19 @@ def render_scene(name, frames_iter, duration, audio_in, audio_out):
         os.path.join(DEMO, f"scene_{name}.mp4"),
     ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for i, frame in enumerate(frames_iter):
+    last = None
+    i = 0
+    for frame in frames_iter:
         if i >= n:
             break
+        last = frame
         proc.stdin.write(frame.tobytes())
+        i += 1
+    # pad any shortfall with the last frame so the scene is exactly n frames
+    if last is not None:
+        while i < n:
+            proc.stdin.write(last.tobytes())
+            i += 1
     proc.stdin.close()
     proc.wait()
     # pad narration to scene duration -> wav
