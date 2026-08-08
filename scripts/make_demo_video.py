@@ -118,12 +118,11 @@ def evidence_frame():
     img, draw = frame_base()
     rows = [
         ("Run", "Action", "Transaction", "Status", DIM),
-        ("01", "Mint 10,000 MockUSDC seed", "0x6bdf4521…32b6", "sponsored", GREEN),
-        ("02", "Approve exact 1,000 (PREFILL-07)", "0x6724cd07…5a2c", "sponsored", GREEN),
-        ("03", "Deposit ALLOW → venue", "0x4fae07dd…f326", "sponsored", GREEN),
-        ("04", "Deposit ALLOW → venue", "0xc137e53f…e6c8", "sponsored", GREEN),
-        ("05", "Deposit DENY (unlisted venue)", "zero txs", "blocked", PINK),
-        ("06", "verify_position read-back", "2,000 sUSDS", "verified", GREEN),
+        ("01", "Scan + rank — live Aave V3 WETH APY", "onchain reads", "1.43% live", GREEN),
+        ("02", "Supply 0.005 WETH → Aave V3", "0x06d9288e…26f", "sponsored", GREEN),
+        ("03", "Withdraw 0.002 WETH from Aave V3", "0x41d8900d…88f", "sponsored", GREEN),
+        ("04", "Supply to unlisted venue", "zero txs", "blocked", PINK),
+        ("05", "verify_position aWETH read-back", "0.003 aWETH", "verified", GREEN),
     ]
     f = mono(30)
     draw.text((150, 140), "Transactions, not mockups", font=sans(56), fill=WHITE)
@@ -136,7 +135,7 @@ def evidence_frame():
                 color = DIM
             draw.text((cx, y), txt, font=f, fill=color)
         y += 56
-    draw.text((150, y + 30), "Every hash status 1 on Etherscan · 2,000 sUSDS confirmed onchain", font=mono(30), fill=GREEN)
+    draw.text((150, y + 30), "Every hash status 1 on Etherscan · Aave V3 Pool (real protocol)", font=mono(30), fill=GREEN)
     return img
 
 
@@ -205,25 +204,23 @@ S2 = [("PLOW", 0), ("The write path for agent-executed yield", 0), ("policy-gate
 
 S3_LINES = [
     ([("$ plow scan ", DIM), ("0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf", YELLOW), (" --chain sepolia", DIM)], 0.0),
-    ([("✓ ", GREEN), ("read idle ", PURPLE), ("USDC", WHITE), ("     18,000.00", GREEN), ("  @ ", WHITE), ("0x032b4f813F…8dd9", YELLOW)], 0.0),
+    ([("✓ ", GREEN), ("read idle ", PURPLE), ("WETH", WHITE), ("      0.01", GREEN), ("  @ ", WHITE), ("0xc558dbdd85…9a3c", YELLOW)], 0.0),
     ([("→ ", PURPLE), ("1 position(s) on sepolia", WHITE)], 0.0),
     ([("→ ", PURPLE), ("rank venues (defillama yields, live)", WHITE)], 0.0),
-    ([("  1. ", YELLOW), ("Mock Spark", WHITE), ("          4.03%", GREEN), ("  apy · DefiLlama live", DIM)], 0.0),
-    ([("  2. ", YELLOW), ("Mock Sky Savings", WHITE), ("    3.52%", GREEN), ("  apy · DefiLlama live", DIM)], 0.0),
-    ([("  3. ", YELLOW), ("Mock Aave V3", WHITE), ("        3.46%", GREEN), ("  apy · DefiLlama live", DIM)], 0.0),
+    ([("  1. ", YELLOW), ("Aave V3 (WETH supply)", WHITE), ("  1.43%", GREEN), ("  apy", DIM)], 0.0),
 ]
 
 S4_LINES = [
-    ([("$ plow deposit ", DIM), ("--venue mock-sky --amount 1000", YELLOW)], 0.0),
+    ([("$ plow deposit ", DIM), ("--venue aave-v3-weth --amount 0.005", YELLOW)], 0.0),
     ([("· ", PURPLE), ("gate  venue allowlisted ", WHITE), ("✓", GREEN), ("  simulate: wouldRevert=false ", WHITE), ("✓", GREEN)], 0.0),
-    ([("· ", PURPLE), ("approve exact 1,000.00 (no max-uint)   → ", WHITE), ("sponsored ", GREEN), ("0x6724cd07ffd…5a2c", YELLOW)], 2.0),
-    ([("· ", PURPLE), ("deposit 1,000.00 → mock-sky            → ", WHITE), ("sponsored ", GREEN), ("0xc137e53fb1a…e6c8", YELLOW)], 2.0),
-    ([("✓ ", GREEN), ("verify balanceOf = ", PURPLE), ("2,000.00", GREEN), (" sUSDS · onchain read", WHITE)], 0.0),
+    ([("· ", PURPLE), ("supply 0.005 → Aave V3", WHITE), ("            → ", WHITE), ("sponsored ", GREEN), ("0x06d9288e…26f", YELLOW)], 2.0),
+    ([("· ", PURPLE), ("withdraw 0.002", WHITE), ("                    → ", WHITE), ("sponsored ", GREEN), ("0x41d8900d…88f", YELLOW)], 2.0),
+    ([("✓ ", GREEN), ("verify balanceOf = ", PURPLE), ("0.003", GREEN), (" aWETH · onchain read", WHITE)], 0.0),
     ([("✓ ", GREEN), ("audit  ", PURPLE), ("{decision:ALLOW, gas:sponsored, outcome:landed, ts:…}", WHITE)], 0.0),
 ]
 
 S5_LINES = [
-    ([("$ plow deposit ", DIM), ("--venue unlisted-venue --amount 100", YELLOW)], 0.0),
+    ([("$ plow deposit ", DIM), ("--venue unlisted-venue --amount 0.001", YELLOW)], 0.0),
     ([("✗ ", PINK), ("DENY  ", WHITE), ("venue unlisted-venue disabled", PINK), (" · ", WHITE), ("zero transactions broadcast", PINK)], 0.0),
 ]
 

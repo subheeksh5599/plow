@@ -60,10 +60,9 @@ async def _scan(args, plow):
         return
     print("→ rank venues (defillama yields, live)")
     for i, v in enumerate(rank["ranked"], 1):
-        flag = " · degrade" if "degrade" in v["apySource"] else ""
-        print(f"  {i}. {v['name']:<18} {v['apy']:>5.2f}%  apy{flag}")
-    if rank["degraded"]:
-        print("  (no live pools matched — configured rates, flagged)")
+        print(f"  {i}. {v['name']:<18} {v['apy']:>5.2f}%  apy")
+    if not rank["ranked"]:
+        print("  (no venues matched a live pool — nothing is ranked on made-up rates)")
 
 
 async def _rank(args, plow):
@@ -73,10 +72,9 @@ async def _rank(args, plow):
         return
     print("→ rank venues (defillama yields, live)")
     for i, v in enumerate(rank["ranked"], 1):
-        flag = " · degrade" if "degrade" in v["apySource"] else ""
-        print(f"  {i}. {v['name']:<18} {v['apy']:>5.2f}%  apy{flag}")
-    if rank["degraded"]:
-        print("  (no live pools matched — configured rates, flagged)")
+        print(f"  {i}. {v['name']:<18} {v['apy']:>5.2f}%  apy")
+    if not rank["ranked"]:
+        print("  (no venues matched a live pool — nothing is ranked on made-up rates)")
 
 
 async def _deposit(args, plow):

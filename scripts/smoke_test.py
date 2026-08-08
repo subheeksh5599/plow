@@ -45,7 +45,7 @@ def main():
 
         tools = rpc(client, args.url, key, "tools/list")
         names = [t["name"] for t in tools["result"]["tools"]]
-        expected = {"scan_positions", "rank_venues", "execute_deposit", "verify_position", "list_escalations", "resolve_escalation"}
+        expected = {"scan_positions", "rank_venues", "execute_deposit", "execute_withdraw", "verify_position", "list_escalations", "resolve_escalation"}
         assert expected.issubset(set(names)), f"missing tools: {expected - set(names)}"
         print(f"✓ tools/list — {len(names)} tools: {', '.join(names)}")
 
@@ -53,7 +53,7 @@ def main():
         ranked = rank["result"]["ranked"]
         assert ranked, "rank_venues returned no venues"
         top = ranked[0]
-        print(f"✓ rank_venues live — top: {top['name']} {top['apy']:.2f}% (degraded={rank['result']['degraded']})")
+        print(f"✓ rank_venues live — top: {top['name']} {top['apy']:.2f}% ({top['apySource'][:50]})")
 
     print("\nsmoke test PASS")
 
