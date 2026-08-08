@@ -2,6 +2,7 @@
 """Plow CLI — scan, rank, gate, deposit, verify from the terminal.
 
 Human-readable by default; pass --json for the raw structured output.
+--chain selects the chain (env is set before the server module imports).
 """
 import argparse
 import asyncio
@@ -11,24 +12,26 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server"))
 
-from plow import (  # noqa: E402
-    execute_deposit,
-    kh_wallet_address,
-    rank_venues,
-    scan_positions,
-    verify_position,
-)
+CHAIN_ENV = {
+    "sepolia": {"KEEPERHUB_CHAIN": "sepolia", "KEEPERHUB_CHAIN_ID": "11155111"},
+    "base-sepolia": {
+        "KEEPERHUB_CHAIN": "base-sepolia",
+        "KEEPERHUB_CHAIN_ID": "84532",
+        "KEEPERHUB_RPC_OVERRIDE": "https://base-sepolia-rpc.publicnode.com",
+        "PLOW_BLOCKSCOUT": "https://base-sepolia.blockscout.com/api",
+        "PLOW_POLICY_PATH": "server/policies.base.json",
+    },
+}
 
 
 def _load_env(path=".env"):
-    if not os.path.exists(path):
-        return
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
+    if os.path.exists(path):
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip())
 
 
 def _out_json(obj):
@@ -39,9 +42,9 @@ def _short(addr: str, n: int = 12) -> str:
     return f"{addr[:n]}…{addr[-4:]}"
 
 
-async def _scan(args):
-    addr = args.address or await kh_wallet_address()
-    scan = await scan_positions(addr)
+async def _scan(args, plow):
+    addr = args.address or await plow.kh_wallet_address()
+    scan = await plow.scan_positions(addr)
     if args.json:
         _out_json(scan)
         return
@@ -51,33 +54,33 @@ async def _scan(args):
         print(f"✓ read idle {p['symbol']:<5} {p['amount']:>12,.2f}  @ {_short(p['address'])}")
     print(f"→ {len(scan['positions'])} position(s) on {scan['chain']}")
 
-    rank = await rank_venues()
+    rank = await plow.rank_venues()
     if args.json:
         _out_json(rank)
         return
     print("→ rank venues (defillama yields, live)")
     for i, v in enumerate(rank["ranked"], 1):
-        flag = " · degrade" if v["apySource"].startswith("config") else ""
+        flag = " · degrade" if "degrade" in v["apySource"] else ""
         print(f"  {i}. {v['name']:<18} {v['apy']:>5.2f}%  apy{flag}")
     if rank["degraded"]:
-        print("  (no live testnet pools — configured rates, flagged)")
+        print("  (no live pools matched — configured rates, flagged)")
 
 
-async def _rank(args):
-    rank = await rank_venues()
+async def _rank(args, plow):
+    rank = await plow.rank_venues()
     if args.json:
         _out_json(rank)
         return
     print("→ rank venues (defillama yields, live)")
     for i, v in enumerate(rank["ranked"], 1):
-        flag = " · degrade" if v["apySource"].startswith("config") else ""
+        flag = " · degrade" if "degrade" in v["apySource"] else ""
         print(f"  {i}. {v['name']:<18} {v['apy']:>5.2f}%  apy{flag}")
     if rank["degraded"]:
-        print("  (no live testnet pools — configured rates, flagged)")
+        print("  (no live pools matched — configured rates, flagged)")
 
 
-async def _deposit(args):
-    result = await execute_deposit(
+async def _deposit(args, plow):
+    result = await plow.execute_deposit(
         args.venue, args.amount, address=args.address, auto_approve_escalation=args.approve
     )
     if args.json:
@@ -90,17 +93,17 @@ async def _deposit(args):
         print(f"⚠ ESCALATE  {result.get('reason','')} · awaiting approval")
         return
     tx = result.get("transaction_hash") or ""
-    print(f"· gate  venue allowlisted ✓  simulate: wouldRevert=false ✓")
+    print("· gate  venue allowlisted ✓  simulate: wouldRevert=false ✓")
     print(f"· approve exact {args.amount:,.2f} (no max-uint)   → sponsored {_short(tx) if tx else '…'}")
     print(f"· deposit {args.amount:,.2f} → {args.venue:<18} → sponsored {_short(tx)}")
     v = result.get("verified") or {}
     print(f"✓ verify balanceOf = {v.get('shares_formatted', 0):,.2f} sUSDS · onchain read")
-    print(f"✓ audit  {{decision:ALLOW, gas:sponsored, outcome:landed, ts:…}}")
+    print("✓ audit  {decision:ALLOW, gas:sponsored, outcome:landed, ts:…}")
 
 
-async def _verify(args):
-    addr = args.address or await kh_wallet_address()
-    result = await verify_position(addr, args.venue)
+async def _verify(args, plow):
+    addr = args.address or await plow.kh_wallet_address()
+    result = await plow.verify_position(addr, args.venue)
     if args.json:
         _out_json(result)
         return
@@ -110,9 +113,8 @@ async def _verify(args):
         print(f"✗ verify failed: {result.get('error','')}")
 
 
-async def _escalations(args):
-    from plow import list_escalations
-    result = list_escalations()
+async def _escalations(args, plow):
+    result = plow.list_escalations()
     if args.json:
         _out_json(result)
         return
@@ -122,18 +124,18 @@ async def _escalations(args):
         print(f"⚠ [{e['index']}] {e['venue_id']} {e['amount']:,.2f} · {e.get('reason','')}")
 
 
-async def _resolve(args):
-    from plow import resolve_escalation
-    result = await resolve_escalation(args.index, args.approve)
+async def _resolve(args, plow):
+    result = await plow.resolve_escalation(args.index, args.approve)
     if args.json:
         _out_json(result)
         return
-    print(f"{'✓ APPROVED' if result.get('decision') == 'ALLOW' else ('✓ ' + str(result.get('decision')))}  {result.get('reason', result.get('error',''))}")
+    print(f"✓ {result.get('decision')}  {result.get('reason', result.get('error',''))}")
 
 
 def main():
     p = argparse.ArgumentParser(prog="plow", description="Plow — policy-gated yield deposits via KeeperHub")
     p.add_argument("--json", action="store_true", help="raw structured output")
+    p.add_argument("--chain", choices=list(CHAIN_ENV), default=None, help="chain (env is set before the server imports)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("scan", help="scan stablecoin positions + rank venues")
@@ -158,15 +160,21 @@ def main():
     e = sub.add_parser("escalations", help="list pending ESCALATE decisions")
     e.set_defaults(fn=_escalations)
 
-    r = sub.add_parser("resolve", help="approve/reject a pending escalation")
-    r.add_argument("--index", type=int, required=True)
-    r.add_argument("--approve", action="store_true", help="approve (re-run gated deposit)")
-    r.add_argument("--reject", action="store_true", help="reject")
-    r.set_defaults(fn=_resolve)
+    r2 = sub.add_parser("resolve", help="approve/reject a pending escalation")
+    r2.add_argument("--index", type=int, required=True)
+    r2.add_argument("--approve", action="store_true", help="approve (re-run gated deposit)")
+    r2.add_argument("--reject", action="store_true", help="reject")
+    r2.set_defaults(fn=_resolve)
 
     args = p.parse_args()
     _load_env()
-    asyncio.run(args.fn(args))
+    if args.chain:
+        for k, val in CHAIN_ENV[args.chain].items():
+            os.environ[k] = val
+
+    import plow  # env is set before import → chain constants are correct
+
+    asyncio.run(args.fn(args, plow))
 
 
 if __name__ == "__main__":
