@@ -8,7 +8,8 @@
 [![Sepolia: MockSkySavings](https://img.shields.io/badge/📜_Sepolia-MockSkySavings-14151a)](https://sepolia.etherscan.io/address/0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e)
 [![Sepolia: MockUSDC](https://img.shields.io/badge/📜_Sepolia-MockUSDC-14151a)](https://sepolia.etherscan.io/address/0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9)
 [![License: MIT](https://img.shields.io/badge/license-MIT-533afd.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-24%20passing-3fb950)
+![Tests](https://img.shields.io/badge/tests-27%20passing-3fb950)
+[![CI](https://img.shields.io/github/actions/workflow/status/subheeksh5599/plow/ci.yml?branch=main&label=CI)](https://github.com/subheeksh5599/plow/actions)
 ![Stack](https://img.shields.io/badge/Python%20·%20Solidity%20·%20Next.js-1f1f23)
 ![KeeperHub](https://img.shields.io/badge/KeeperHub-execution%20layer-533afd)
 ![Sepolia](https://img.shields.io/badge/Sepolia-testnet-533afd)
@@ -288,7 +289,7 @@ for APY context; they can never move funds.
 
 ## Tests
 
-**24 tests passing — 7 Foundry + 17 Python**, all green:
+**27 tests passing — 7 Foundry + 20 Python**, all green:
 
 ```
 === Foundry (contracts) ===
@@ -303,11 +304,13 @@ Ran 7 tests for test/Plow.t.sol:PlowTest
 Suite result: ok. 7 passed; 0 failed
 
 === Python (server) ===
-All tests passed — 17/17
+All tests passed — 20/20
 gate: unlisted DENY, disabled DENY, rank-only (no executable address) DENY,
 zero-amount DENY, cap DENY, simulate-revert DENY, fail-closed DENY, in-policy
-ALLOW, over-budget ESCALATE, intent-key determinism, BYOK precedence, calldata
-selectors, rank degrade, rank live-APY match, scan empty
+ALLOW, over-budget ESCALATE, active-window wraparound, intent-key determinism,
+BYOK precedence, calldata selectors, rank degrade, rank live-APY match,
+escalation lifecycle (list/reject), scheduler addressable-venue selection,
+scan empty
 ```
 
 Run them:
@@ -344,6 +347,46 @@ cd frontend && npm install && npm run build   # static export → out/
 
 Point `PLOW_POLICY_PATH` at `server/policies.json` (venues + tokens config) and
 `KEEPERHUB_CHAIN_ID` at your chain (11155111 = Sepolia, 84532 = Base Sepolia).
+
+### policies.json reference
+
+```jsonc
+{
+  "window": { "start": 0, "end": 23 },              // UTC hours; 23→5 wraps overnight
+  "functionAllowlist": ["approve(address,uint256)", "deposit(uint256)"],
+  "tokens": [ { "symbol": "USDC", "address": "0x…", "decimals": 6 } ],
+  "venues": [
+    {
+      "id": "mock-sky",                             // gate key for --venue / MCP args
+      "name": "Mock Sky Savings",
+      "address": "0x…",                             // executable contract; 0x0 = rank-only, DENY
+      "tokenAddress": "0x…",
+      "enabled": true,
+      "maxDeposit": 5000,                           // per-deposit cap
+      "budget": 10000,                              // per-period budget
+      "budgetPeriodHours": 24,
+      "apyOverride": 5.12,                          // degrade fallback only
+      "defillamaProject": "sky-lending",            // live-APY hint
+      "defillamaSymbol": "SUSDS"
+    }
+  ]
+}
+```
+
+A venue with a zero `address` is **rank-only**: it appears in the APY ranking
+but the gate DENYs any deposit to it (zero transactions broadcast).
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `kh_api_key_not_set` | `KH_API_KEY` missing — set it in `.env` or export it |
+| `DENY ... simulation unavailable (fail closed)` | KeeperHub simulate call failed; `PLOW_FAIL_CLOSED=0` disables the hard stop (not recommended) |
+| `DENY ... approve simulation reverted` | The token's approve is blocked for this spender/amount |
+| `DENY ... venue has no executable address` | The venue is rank-only (zero address) — pick an addressable one |
+| 502 on contract-call | Transient KeeperHub upstream — the client retries 3× with backoff |
+| `DENY ... over per-period budget` | Check `budget` / `budgetPeriodHours`; raise it or wait for the period to roll |
+| Rank shows `degrade` | DefiLlama fetch failed or no pool matched the hints — configured rates are used and flagged |
 
 ---
 
