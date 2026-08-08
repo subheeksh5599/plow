@@ -1,61 +1,35 @@
 {
   "window": { "start": 0, "end": 23 },
-  "functionAllowlist": ["approve(address,uint256)", "deposit(uint256)"],
+  "functionAllowlist": ["approve(address,uint256)", "supply(address,uint256,address,uint16)", "withdraw(address,uint256,address)"],
   "tokens": [
-    { "symbol": "USDC", "address": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9", "decimals": 6 }
+    { "symbol": "WETH", "address": "0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c", "decimals": 18 }
   ],
   "venues": [
     {
-      "id": "mock-sky",
-      "name": "Mock Sky Savings",
-      "address": "0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e",
-      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
+      "id": "aave-v3-weth",
+      "name": "Aave V3 (WETH supply)",
+      "address": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+      "tokenAddress": "0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c",
+      "aTokenAddress": "0x5b071b590a59395fe4025a0ccc1fcc931aac1830",
+      "functionName": "supply",
       "enabled": true,
-      "maxDeposit": 5000,
-      "budget": 10000,
+      "maxDeposit": 0.02,
+      "budget": 0.05,
       "budgetPeriodHours": 24,
-      "apyOverride": 5.12,
-      "defillamaProject": "sky-lending",
-      "defillamaSymbol": "SUSDS"
-    },
-    {
-      "id": "mock-spark",
-      "name": "Mock Spark",
-      "address": "0x0000000000000000000000000000000000000000",
-      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
-      "enabled": true,
-      "maxDeposit": 5000,
-      "budget": 10000,
-      "budgetPeriodHours": 24,
-      "apyOverride": 4.87,
-      "defillamaProject": "ethena-usde",
-      "defillamaSymbol": "SUSDE"
-    },
-    {
-      "id": "mock-aave",
-      "name": "Mock Aave V3",
-      "address": "0x0000000000000000000000000000000000000000",
-      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
-      "enabled": true,
-      "maxDeposit": 5000,
-      "budget": 10000,
-      "budgetPeriodHours": 24,
-      "apyOverride": 3.94,
       "defillamaProject": "aave-v3",
-      "defillamaSymbol": "USDC"
+      "defillamaSymbol": "WETH"
     },
     {
       "id": "unlisted-venue",
       "name": "Not Allowlisted",
       "address": "0x0000000000000000000000000000000000000000",
-      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
+      "tokenAddress": "0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c",
       "enabled": false,
       "maxDeposit": 0,
       "budget": 0,
       "budgetPeriodHours": 24,
-      "apyOverride": 0,
-      "defillamaProject": "",
-      "defillamaSymbol": ""
+      "defillamaProject": "none",
+      "defillamaSymbol": "NONE"
     }
   ]
 }

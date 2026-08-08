@@ -41,25 +41,22 @@ def active_key() -> str:
 
 
 # ---------------------------------------------------------------- ABIs
-MOCK_USDC = os.environ.get("PLOW_MOCK_USDC", "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9")
-ABI_MOCK_USDC = json.dumps(
+# Standard ERC-20 (approve/balanceOf/transfer/allowance) — the asset side.
+ABI_ERC20 = json.dumps(
     [
         {"type": "function", "name": "approve", "inputs": [{"name": "spender", "type": "address"}, {"name": "amount", "type": "uint256"}], "outputs": [{"type": "bool"}], "stateMutability": "nonpayable"},
         {"type": "function", "name": "balanceOf", "inputs": [{"name": "account", "type": "address"}], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
-        {"type": "function", "name": "mint", "inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "outputs": [], "stateMutability": "nonpayable"},
         {"type": "function", "name": "transfer", "inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "outputs": [{"type": "bool"}], "stateMutability": "nonpayable"},
-        {"type": "function", "name": "transferFrom", "inputs": [{"name": "from_", "type": "address"}, {"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "outputs": [{"type": "bool"}], "stateMutability": "nonpayable"},
         {"type": "function", "name": "allowance", "inputs": [{"name": "owner", "type": "address"}, {"name": "spender", "type": "address"}], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
     ]
 )
 
-ABI_MOCK_SKY = json.dumps(
+# Aave V3 Pool (supply/withdraw) — the real venue surface.
+ABI_AAVE_POOL = json.dumps(
     [
-        {"type": "function", "name": "deposit", "inputs": [{"name": "amount", "type": "uint256"}], "outputs": [{"type": "uint256"}], "stateMutability": "nonpayable"},
-        {"type": "function", "name": "withdraw", "inputs": [{"name": "shares", "type": "uint256"}], "outputs": [{"type": "uint256"}], "stateMutability": "nonpayable"},
-        {"type": "function", "name": "balanceOf", "inputs": [{"name": "account", "type": "address"}], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
-        {"type": "function", "name": "rateBps", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
-        {"type": "function", "name": "underlying", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"},
+        {"type": "function", "name": "supply", "inputs": [{"name": "asset", "type": "address"}, {"name": "amount", "type": "uint256"}, {"name": "onBehalfOf", "type": "address"}, {"name": "referralCode", "type": "uint16"}], "outputs": [], "stateMutability": "nonpayable"},
+        {"type": "function", "name": "withdraw", "inputs": [{"name": "asset", "type": "address"}, {"name": "amount", "type": "uint256"}, {"name": "to", "type": "address"}], "outputs": [{"name": "", "type": "uint256"}], "stateMutability": "nonpayable"},
+        {"type": "function", "name": "getReserveData", "inputs": [{"name": "asset", "type": "address"}], "outputs": [{"name": "", "type": "tuple"}], "stateMutability": "view"},
     ]
 )
 
@@ -121,9 +118,11 @@ def gate_deposit(policy: dict, venue_id: str, amount: float, simulate: Optional[
     in_window = (w_start <= hour <= w_end) if w_start <= w_end else (hour >= w_start or hour <= w_end)
     check("window", in_window, f"utc {hour} in window {win}")
 
-    # function allowlist
+    # function allowlist — the venue declares the function it executes
+    fn = venue.get("functionName", "deposit").lower()
     fns = [f.lower() for f in policy.get("functionAllowlist", [])]
-    check("function_allowlist", "deposit" in " ".join(fns), f"deposit allowed: {fns}")
+    allowed = any(fn in f for f in fns)
+    check("function_allowlist", allowed, f"{fn} allowed: {fns}")
 
     # simulation gate — fail closed
     if simulate is None:
@@ -361,20 +360,18 @@ async def defillama_yields(force: bool = False) -> list:
     now = time.time()
     if not force and _yields_cache["ts"] and now - _yields_cache["ts"] < 900:
         return _yields_cache["data"]
-    try:
-        async with httpx.AsyncClient(timeout=4) as client:
-            resp = await client.get("https://yields.llama.fi/pools")
-            _yields_cache["data"] = resp.json().get("data", [])
-            _yields_cache["ts"] = now
-    except Exception:
-        return _yields_cache["data"]  # degrade: keep last known, or []
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get("https://yields.llama.fi/pools")
+        resp.raise_for_status()
+        _yields_cache["data"] = resp.json().get("data", [])
+        _yields_cache["ts"] = now
     return _yields_cache["data"]
 
 
 async def scan_positions(address: str, token_configs: Optional[list] = None) -> dict:
     """Read stablecoin balances for an address across configured tokens."""
     policy = load_policy()
-    tokens = token_configs or policy.get("tokens", [])
+    tokens = policy.get("tokens", []) if token_configs is None else token_configs
     positions = []
     for t in tokens:
         try:
@@ -389,16 +386,18 @@ async def scan_positions(address: str, token_configs: Optional[list] = None) -> 
 
 
 async def rank_venues(positions: Optional[list] = None) -> dict:
-    """Rank allowlisted venues by live APY; degrade to configured APY on failure."""
+    """Rank allowlisted venues by LIVE DefiLlama APY.
+
+    No fallback: if the yield feed is unreachable the call fails loudly, and a
+    venue whose pool cannot be matched is excluded (never ranked on made-up
+    rates).
+    """
     policy = load_policy()
     pools = await defillama_yields()
     ranked = []
-    degraded = False
     for v in policy["venues"]:
         if not v.get("enabled", True):
             continue
-        apy = None
-        source = None
         want_proj = v.get("defillamaProject", "").lower()
         want_sym = v.get("defillamaSymbol", "").upper()
         best = None
@@ -412,31 +411,39 @@ async def rank_venues(positions: Optional[list] = None) -> dict:
             if best is None or rank_chain < best[0]:
                 apy_raw = float(pool.get("apy") or pool.get("apyBase") or 0)
                 best = (rank_chain, pool, apy_raw)
-        if best:
-            _, pool, apy_raw = best
-            tvl = pool.get("tvlUsd", 0)
-            apy = round(apy_raw, 2)
-            source = f"defillama {pool.get('project')}/{pool.get('symbol')} tvl=${tvl:,.0f}"
-        if apy is None or apy <= 0:
-            apy = float(v.get("apyOverride", 0))
-            source = "config override (degrade path)"
-            degraded = True
+        if not best:
+            continue  # no live pool — do not rank on fabricated rates
+        _, pool, apy_raw = best
+        tvl = pool.get("tvlUsd", 0)
         ranked.append({
             "venue_id": v["id"],
             "name": v.get("name", v["id"]),
             "address": v.get("address"),
-            "apy": apy,
-            "apySource": source,
+            "apy": round(apy_raw, 2),
+            "apySource": f"defillama {pool.get('project')}/{pool.get('symbol')} tvl=${tvl:,.0f}",
             "addressable": bool(v.get("address")) and v["address"].lower() != "0x" + "0" * 40,
             "maxDeposit": v.get("maxDeposit", 0),
         })
     ranked.sort(key=lambda r: r["apy"], reverse=True)
-    return {"chain": CHAIN, "ranked": ranked, "degraded": degraded, "poolCount": len(pools)}
+    return {"chain": CHAIN, "ranked": ranked, "poolCount": len(pools)}
 
 
 # ---------------------------------------------------------------- execution
-async def _simulate_deposit(venue: dict, amount: int) -> dict:
-    return await kh_contract_call(venue["address"], "deposit", [amount], ABI_MOCK_SKY, simulate=True)
+def _token_decimals(policy: dict, token_address: str) -> int:
+    for t in policy.get("tokens", []):
+        if str(t.get("address", "")).lower() == token_address.lower():
+            return int(t.get("decimals", 18))
+    return 18
+
+
+async def _simulate_supply(venue: dict, amount: int, on_behalf: str) -> dict:
+    return await kh_contract_call(
+        venue["address"],
+        "supply",
+        [venue["tokenAddress"], amount, on_behalf, 0],
+        ABI_AAVE_POOL,
+        simulate=True,
+    )
 
 
 async def execute_deposit(
@@ -446,8 +453,8 @@ async def execute_deposit(
     approve: bool = True,
     auto_approve_escalation: bool = False,
 ) -> dict:
-    """Full gated deposit: scan balance -> exact-approve (if needed) -> simulate ->
-    gate -> deposit -> verify."""
+    """Full gated supply: scan balance -> exact-approve (if needed) -> simulate ->
+    gate -> supply (Aave V3) -> verify aToken balance."""
     policy = load_policy()
     venues = {v["id"]: v for v in policy["venues"]}
     venue = venues.get(venue_id)
@@ -457,10 +464,11 @@ async def execute_deposit(
     if not address:
         address = await kh_wallet_address()
 
-    amount_units = int(round(amount * 1e6))  # USDC 6 decimals
     token = venue.get("tokenAddress")
     if not token:
         return {"ok": False, "error": "venue missing tokenAddress"}
+    decimals = _token_decimals(policy, token)
+    amount_units = int(round(amount * 10**decimals))
 
     txs: list = []
     approve_hash: Optional[str] = None
@@ -483,19 +491,19 @@ async def execute_deposit(
         return {"ok": False, "decision": "DENY", "reason": "allowance read failed (fail closed)", "txs": 0}
 
     if current_allowance < amount_units:
-        sim_approve = await kh_contract_call(token, "approve", [venue["address"], amount_units], ABI_MOCK_USDC, simulate=True)
+        sim_approve = await kh_contract_call(token, "approve", [venue["address"], amount_units], ABI_ERC20, simulate=True)
         if sim_approve.get("wouldRevert") is not False:
             return {"ok": False, "decision": "DENY", "reason": "approve simulation reverted", "txs": 0}
         if approve:
-            exec_approve = await kh_contract_call(token, "approve", [venue["address"], amount_units], ABI_MOCK_USDC)
+            exec_approve = await kh_contract_call(token, "approve", [venue["address"], amount_units], ABI_ERC20)
             approve_id = exec_approve.get("executionId")
             if approve_id:
                 approve_status = await kh_execution_status(approve_id)
                 approve_hash = approve_status.get("transactionHash")
                 txs.append(approve_id)
 
-    # 2) simulate the deposit (now that approval is in place)
-    simulate = await _simulate_deposit(venue, amount_units)
+    # 2) simulate the supply (now that approval is in place)
+    simulate = await _simulate_supply(venue, amount_units, address)
 
     # 3) gate
     verdict = gate_deposit(policy, venue_id, amount, simulate)
@@ -518,15 +526,15 @@ async def execute_deposit(
     if verdict["decision"] == "ESCALATE" and not auto_approve_escalation:
         return {"ok": False, "decision": "ESCALATE", "reason": verdict["reason"], "checks": verdict["checks"], "txs": len(txs)}
 
-    # 3) deposit (write executes; sponsored on testnets)
-    exec_dep = await kh_contract_call(venue["address"], "deposit", [amount_units], ABI_MOCK_SKY)
+    # 4) supply (write executes; sponsored on testnets)
+    exec_dep = await kh_contract_call(venue["address"], "supply", [token, amount_units, address, 0], ABI_AAVE_POOL)
     dep_id = exec_dep.get("executionId")
     txs.append(dep_id)
     dep_status = await kh_execution_status(dep_id)
     tx_hash = dep_status.get("transactionHash")
     sponsored = dep_status.get("sponsored")
 
-    # 4) verify onchain
+    # 5) verify onchain (aToken balance)
     verified = await verify_position(address, venue_id)
 
     record.update({
@@ -554,17 +562,65 @@ async def execute_deposit(
     }
 
 
+async def execute_withdraw(
+    venue_id: str,
+    amount: float,
+    address: Optional[str] = None,
+    auto_approve_escalation: bool = False,
+) -> dict:
+    """Policy-gated Aave withdraw: simulate -> gate -> withdraw -> verify balance."""
+    policy = load_policy()
+    venues = {v["id"]: v for v in policy["venues"]}
+    venue = venues.get(venue_id)
+    if not venue:
+        return {"ok": False, "error": f"venue {venue_id} not in allowlist"}
+    if not address:
+        address = await kh_wallet_address()
+
+    token = venue.get("tokenAddress")
+    decimals = _token_decimals(policy, token or "")
+    amount_units = int(round(amount * 10**decimals))
+    intent_key = stable_intent_key(f"{venue_id}:withdraw", amount, CHAIN)
+
+    pre = gate_deposit(policy, venue_id, amount, None, simulate_required=False)
+    if pre["decision"] == "DENY":
+        return {"ok": False, "decision": "DENY", "reason": pre["reason"], "checks": pre["checks"], "txs": 0}
+    if pre["decision"] == "ESCALATE" and not auto_approve_escalation:
+        return {"ok": False, "decision": "ESCALATE", "reason": pre["reason"], "checks": pre["checks"], "txs": 0}
+
+    simulate = await kh_contract_call(venue["address"], "withdraw", [token, amount_units, address], ABI_AAVE_POOL, simulate=True)
+    verdict = gate_deposit(policy, venue_id, amount, simulate)
+    audit_append({"venue_id": venue_id, "amount": amount, "chain": CHAIN, "action": "withdraw", "decision": verdict["decision"], "reason": verdict["reason"], "checks": verdict["checks"], "intent_key": intent_key})
+    if verdict["decision"] != "ALLOW":
+        return {"ok": False, "decision": verdict["decision"], "reason": verdict["reason"], "checks": verdict["checks"], "txs": 0}
+
+    exec_w = await kh_contract_call(venue["address"], "withdraw", [token, amount_units, address], ABI_AAVE_POOL)
+    w_id = exec_w.get("executionId")
+    w_status = await kh_execution_status(w_id)
+    return {
+        "ok": True,
+        "decision": "ALLOW",
+        "execution_id": w_id,
+        "transaction_hash": w_status.get("transactionHash"),
+        "transaction_link": w_status.get("transactionLink"),
+        "sponsored": w_status.get("sponsored"),
+        "txs": 1,
+    }
+
+
 async def verify_position(address: str, venue_id: str) -> dict:
     policy = load_policy()
     venues = {v["id"]: v for v in policy["venues"]}
     venue = venues.get(venue_id)
     if not venue:
         return {"ok": False, "error": f"venue {venue_id} not found"}
+    # Aave venues expose an aToken; anything else verifies on the venue itself
+    target = venue.get("aTokenAddress") or venue["address"]
     try:
-        shares = await rpc_read_erc20(venue["address"], address)
+        shares = await rpc_read_erc20(target, address)
     except Exception as e:
         return {"ok": False, "error": str(e)}
-    return {"ok": shares > 0, "venue_id": venue_id, "shares": shares, "shares_formatted": round(shares / 1e18, 6), "source": "eth_call balanceOf onchain"}
+    return {"ok": shares > 0, "venue_id": venue_id, "shares": shares, "shares_formatted": round(shares / 1e18, 6), "source": f"eth_call balanceOf onchain ({target[:10]}…)"}
 
 
 # ---------------------------------------------------------------- MCP tools
@@ -576,12 +632,12 @@ TOOLS = [
     },
     {
         "name": "rank_venues",
-        "description": "Rank allowlisted yield venues by live APY (degrades to config on lookup failure).",
+        "description": "Rank allowlisted yield venues by LIVE DefiLlama APY (no fallback: feed failure fails loudly, unmatched venues are excluded).",
         "parameters": {"type": "object", "properties": {}},
     },
     {
         "name": "execute_deposit",
-        "description": "Policy-gated deposit: simulate, gate, exact-approve, deposit via KeeperHub (sponsored), verify.",
+        "description": "Policy-gated Aave supply: simulate, gate, exact-approve, supply via KeeperHub (sponsored), verify aToken.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -589,6 +645,19 @@ TOOLS = [
                 "amount": {"type": "number"},
                 "address": {"type": "string"},
                 "auto_approve_escalation": {"type": "boolean"},
+            },
+            "required": ["venue_id", "amount"],
+        },
+    },
+    {
+        "name": "execute_withdraw",
+        "description": "Policy-gated Aave withdraw: simulate, gate, withdraw via KeeperHub (sponsored).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "venue_id": {"type": "string"},
+                "amount": {"type": "number"},
+                "address": {"type": "string"},
             },
             "required": ["venue_id", "amount"],
         },
@@ -627,6 +696,8 @@ async def mcp_call(name: str, args: dict) -> dict:
             address=args.get("address"),
             auto_approve_escalation=bool(args.get("auto_approve_escalation", False)),
         )
+    if name == "execute_withdraw":
+        return await execute_withdraw(args["venue_id"], float(args["amount"]), address=args.get("address"))
     if name == "verify_position":
         return await verify_position(args["address"], args["venue_id"])
     if name == "list_escalations":
