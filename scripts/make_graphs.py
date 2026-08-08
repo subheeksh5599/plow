@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Generate README graphs from Plow's own run data -> docs/media/N.png.
 
-Data sources: evidence-sepolia.json (runs) + audits/plow-audit.jsonl (decisions).
+Data sources: evidence-<chain>.json (runs) + audits/plow-audit.jsonl (decisions).
 Re-run after any demo run so graphs never carry stale numbers.
+
+Usage: python scripts/make_graphs.py [--evidence evidence-sepolia.json]
 """
+import argparse
 import json
 import os
 import sys
@@ -36,14 +39,14 @@ plt.rcParams.update({
 })
 
 
-def load_evidence() -> dict:
-    with open(os.path.join(ROOT, "evidence-sepolia.json")) as f:
+def load_evidence(path: str) -> dict:
+    with open(os.path.join(ROOT, path)) as f:
         return json.load(f)
 
 
-def graph_apy_ranking():
+def graph_apy_ranking(evidence_path: str):
     """1.png — ranked venues by APY (from the latest rank run)."""
-    ev = load_evidence()
+    ev = load_evidence(evidence_path)
     ranked = None
     for r in ev["runs"]:
         if r.get("action") == "rank_venues":
@@ -66,9 +69,9 @@ def graph_apy_ranking():
     plt.close(fig)
 
 
-def graph_vault_growth():
+def graph_vault_growth(evidence_path: str):
     """2.png — sUSDS balance growth across the ALLOW deposits."""
-    ev = load_evidence()
+    ev = load_evidence(evidence_path)
     points = [(0, 0)]
     for r in ev["runs"]:
         if r.get("action", "").startswith("deposit ALLOW"):
@@ -98,9 +101,9 @@ def graph_vault_growth():
     plt.close(fig)
 
 
-def graph_outcomes():
+def graph_outcomes(evidence_path: str):
     """3.png — executions per step: sponsored txs vs the zero-tx DENY stop."""
-    ev = load_evidence()
+    ev = load_evidence(evidence_path)
     steps = []
     for r in ev["runs"]:
         action = r.get("action", "")
@@ -131,7 +134,10 @@ def graph_outcomes():
 
 
 if __name__ == "__main__":
-    graph_apy_ranking()
-    graph_vault_growth()
-    graph_outcomes()
-    print("graphs written to docs/media/1.png, 2.png, 3.png")
+    p = argparse.ArgumentParser()
+    p.add_argument("--evidence", default="evidence-sepolia.json", help="evidence file under the repo root")
+    args = p.parse_args()
+    graph_apy_ranking(args.evidence)
+    graph_vault_growth(args.evidence)
+    graph_outcomes(args.evidence)
+    print(f"graphs written to docs/media/1.png, 2.png, 3.png (from {args.evidence})")
