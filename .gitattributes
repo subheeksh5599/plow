@@ -1,0 +1,19 @@
+* text=auto eol=lf
+
+*.sol text
+*.py text
+*.tsx text
+*.ts text
+*.json text
+*.md text
+*.sh text eol=lf
+
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.mp3 binary
+*.wav binary
+
+# linguist overrides — these are vendored or generated, not first-party
+contracts/lib/ linguist-vendored
+frontend/out/ linguist-generated
