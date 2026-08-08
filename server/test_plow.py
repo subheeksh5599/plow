@@ -156,6 +156,74 @@ def test_scan_zero_positions_no_crash():
     check("scan empty returns structure", r["positions"] == [] and r["chain"] == "sepolia")
 
 
+def test_escalation_lifecycle():
+    """list_escalations finds an ESCALATE record; reject resolves it."""
+    import tempfile
+
+    tmp = tempfile.mkdtemp()
+    plow.AUDIT_DIR = tmp  # module constant is bound at import — patch it directly
+    plow.audit_append({"venue_id": "mock-sky", "amount": 9000.0, "chain": "sepolia", "decision": "ESCALATE", "reason": "over per-period budget", "intent_key": "esc-test-1"})
+    listed = plow.list_escalations()
+    check("escalation listed", listed["count"] == 1 and listed["escalations"][0]["venue_id"] == "mock-sky", str(listed))
+
+    async def run():
+        return await plow.resolve_escalation(0, approve=False)
+
+    r = asyncio.run(run())
+    check("escalation rejected", r.get("decision") == "REJECTED", str(r))
+    check("escalation no longer pending", plow.list_escalations()["count"] == 0)
+    plow.AUDIT_DIR = os.path.join(os.path.dirname(__file__), "..", "audits")
+
+
+def test_gate_window_enforced():
+    """Outside the active window the gate DENYs before any transaction."""
+    policy = {
+        "window": {"start": 23, "end": 5},  # 23:00-05:00 UTC
+        "functionAllowlist": ["deposit(uint256)"],
+        "venues": [{"id": "v1", "name": "V1", "address": "0x1111111111111111111111111111111111111111", "tokenAddress": "0x2222222222222222222222222222222222222222", "enabled": True, "maxDeposit": 1000, "budget": 5000, "budgetPeriodHours": 24, "apyOverride": 5.0}],
+    }
+    for hour, expect_deny in [(12, True), (0, False), (3, False), (23, False), (4, False), (10, True)]:
+        plow._utc_hour = lambda h=hour: h
+        v = plow.gate_deposit(policy, "v1", 100.0, {"wouldRevert": False})
+        check(f"window hour {hour} deny={expect_deny}", (v["decision"] == "DENY") == expect_deny, f"h={hour} -> {v['decision']} {v.get('reason')}")
+
+
+def test_scheduler_picks_addressable_venue():
+    """run_once must skip rank-only venues and pick the top addressable one."""
+    import types
+
+    calls = {"execute": None}
+
+    async def fake_execute(venue_id, amount, **kw):
+        calls["execute"] = (venue_id, amount)
+        return {"ok": True, "decision": "ALLOW", "venue_id": venue_id, "txs": 2, "transaction_hash": "0x" + "ab" * 32}
+
+    async def fake_scan(wallet):
+        return {"chain": "sepolia", "positions": [{"symbol": "USDC", "amount": 5000.0}]}
+
+    async def fake_rank():
+        return {
+            "chain": "sepolia",
+            "ranked": [
+                {"venue_id": "mock-spark", "name": "Mock Spark", "apy": 4.03, "addressable": False, "maxDeposit": 5000},
+                {"venue_id": "mock-sky", "name": "Mock Sky Savings", "apy": 3.52, "addressable": True, "maxDeposit": 5000},
+            ],
+            "degraded": False,
+            "poolCount": 0,
+        }
+
+    import importlib
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+    sched = importlib.import_module("plow_scheduler")
+    sched.scan_positions = fake_scan
+    sched.rank_venues = fake_rank
+    sched.execute_deposit = fake_execute
+    r = asyncio.run(sched.run_once(max_deposit=1000.0, wallet="0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf"))
+    check("scheduler executed a deposit", r.get("decision") == "ALLOW", str(r))
+    check("scheduler picked addressable venue", calls["execute"] == ("mock-sky", 1000.0), str(calls["execute"]))
+
+
 if __name__ == "__main__":
     print("Plow server tests")
     test_stable_intent_key_deterministic()
@@ -172,5 +240,8 @@ if __name__ == "__main__":
     test_rank_degrades_when_no_pools()
     test_rank_live_when_pools_match()
     test_scan_zero_positions_no_crash()
+    test_escalation_lifecycle()
+    test_gate_window_enforced()
+    test_scheduler_picks_addressable_venue()
     print(f"\n{len(FAILURES)} failures" if FAILURES else "\nAll tests passed")
     sys.exit(1 if FAILURES else 0)
