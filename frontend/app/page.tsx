@@ -186,31 +186,25 @@ export default function Page() {
             <div className="term-body">
               <span className="dim">$</span> plow scan 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf --chain sepolia
               {"\n"}
-              <span className="dim">✓</span> <span className="purple">read</span> idle USDC&nbsp;&nbsp; <span className="green">18,000.00</span>{" "}
-              @ 0x032b4f81…8dd9
+              <span className="dim">✓</span> <span className="purple">read</span> idle WETH&nbsp;&nbsp; <span className="green">0.01</span>{" "}
+              @ 0xc558dbdd85…9a3c
               {"\n"}
               <span className="dim">→</span> <span className="purple">rank</span> venues (defillama yields, live)
               {"\n"}
-              &nbsp;&nbsp;<span className="yellow">1.</span> Mock Spark&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span className="green">4.03%</span>{" "}
-              apy
+              &nbsp;&nbsp;<span className="yellow">1.</span> Aave V3 (WETH supply)&nbsp;&nbsp;{" "}
+              <span className="green">1.43%</span> apy
               {"\n"}
-              &nbsp;&nbsp;<span className="yellow">2.</span> Mock Sky Savings&nbsp;&nbsp;&nbsp;&nbsp;{" "}
-              <span className="green">3.52%</span> apy
-              {"\n"}
-              &nbsp;&nbsp;<span className="yellow">3.</span> Mock Aave V3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{" "}
-              <span className="green">3.46%</span> apy
-              {"\n"}
-              <span className="dim">$</span> plow deposit --venue mock-sky --amount 1000
+              <span className="dim">$</span> plow deposit --venue aave-v3-weth --amount 0.005
               {"\n"}
               <span className="dim">·</span> <span className="purple">gate</span>&nbsp; venue allowlisted ✓&nbsp; simulate: wouldRevert=false ✓
               {"\n"}
-              <span className="dim">·</span> <span className="purple">approve</span> exact 1,000.00 (no max-uint)&nbsp; →{" "}
-              <span className="green">sponsored</span> 0x6724cd07…5a2c
+              <span className="dim">·</span> <span className="purple">supply</span> 0.005 → Aave V3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
+              <span className="green">sponsored</span> 0x06d9288e…26f
               {"\n"}
-              <span className="dim">·</span> <span className="purple">deposit</span> 1,000.00 → mock-sky&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
-              <span className="green">sponsored</span> 0xc137e53f…e6c8
+              <span className="dim">·</span> <span className="purple">withdraw</span> 0.002&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
+              <span className="green">sponsored</span> 0x41d8900d…88f
               {"\n"}
-              <span className="dim">✓</span> <span className="purple">verify</span> balanceOf = <span className="green">2,000.00</span> sUSDS{" "}
+              <span className="dim">✓</span> <span className="purple">verify</span> balanceOf = <span className="green">0.003</span> aWETH{" "}
               · onchain read
               {"\n"}
               <span className="dim">✓</span> <span className="purple">audit</span>&nbsp; {"{decision:ALLOW, gas:sponsored, outcome:landed, ts:…}"}
@@ -288,22 +282,18 @@ export default function Page() {
               <tbody>
                 <tr>
                   <td className="mono">01</td>
-                  <td>Mint 10,000 MockUSDC seed</td>
-                  <td className="mono">
-                    <a href="https://sepolia.etherscan.io/tx/0x6bdf4521f682e5deddd93083dd6e8e5a69daa3e2762bf576ebfd2454ca7232b6" target="_blank" rel="noopener noreferrer">
-                      0x6bdf4521…32b6
-                    </a>
-                  </td>
+                  <td>Scan + rank — live Aave V3 WETH APY</td>
+                  <td className="mono">onchain reads</td>
                   <td>
-                    <span className="badge">sponsored</span>
+                    <span className="badge">1.43% live</span>
                   </td>
                 </tr>
                 <tr>
                   <td className="mono">02</td>
-                  <td>Approve exact 1,000 (PREFILL-07)</td>
+                  <td>Supply 0.005 WETH → Aave V3</td>
                   <td className="mono">
-                    <a href="https://sepolia.etherscan.io/tx/0x6724cd07ffd27000e1c5fe01923c187b17f63215034427cb6703081b38595a2c" target="_blank" rel="noopener noreferrer">
-                      0x6724cd07…5a2c
+                    <a href="https://sepolia.etherscan.io/tx/0x06d9288e821f98adc86128cfc99e941157f6350f59de80df24f0c5597b0f826f" target="_blank" rel="noopener noreferrer">
+                      0x06d9288e…26f
                     </a>
                   </td>
                   <td>
@@ -312,10 +302,10 @@ export default function Page() {
                 </tr>
                 <tr>
                   <td className="mono">03</td>
-                  <td>Deposit ALLOW → venue</td>
+                  <td>Withdraw 0.002 WETH from Aave V3</td>
                   <td className="mono">
-                    <a href="https://sepolia.etherscan.io/tx/0x4fae07dda4e165e910d614456b7fe78a25125c0d71831a44faaa840367fcf326" target="_blank" rel="noopener noreferrer">
-                      0x4fae07dd…f326
+                    <a href="https://sepolia.etherscan.io/tx/0x41d8900d160bf3f8accd56c4ea04751de7393bd2df2fff3d22c0f5951d9288f1" target="_blank" rel="noopener noreferrer">
+                      0x41d8900d…88f
                     </a>
                   </td>
                   <td>
@@ -324,28 +314,16 @@ export default function Page() {
                 </tr>
                 <tr>
                   <td className="mono">04</td>
-                  <td>Deposit ALLOW → venue</td>
-                  <td className="mono">
-                    <a href="https://sepolia.etherscan.io/tx/0xc137e53fb1abde2af4bebbd4f2874a6fb9f34872ac5898be4979f7a6e0f1e6c8" target="_blank" rel="noopener noreferrer">
-                      0xc137e53f…e6c8
-                    </a>
-                  </td>
-                  <td>
-                    <span className="badge">sponsored</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="mono">05</td>
-                  <td>Deposit DENY (out-of-policy venue)</td>
+                  <td>Supply to unlisted venue</td>
                   <td className="mono">zero txs</td>
                   <td>
                     <span className="badge blocked">blocked</span>
                   </td>
                 </tr>
                 <tr>
-                  <td className="mono">06</td>
-                  <td>verify_position balanceOf read-back</td>
-                  <td className="mono">2,000 sUSDS</td>
+                  <td className="mono">05</td>
+                  <td>verify_position aWETH read-back</td>
+                  <td className="mono">0.003 aWETH</td>
                   <td>
                     <span className="badge">verified</span>
                   </td>
