@@ -4,94 +4,84 @@
   "org_wallet": "0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf",
   "runs": [
     {
-      "run": 0,
-      "action": "mint 10000 MockUSDC",
-      "skipped": true,
-      "held": 19000.0
-    },
-    {
       "run": 1,
       "action": "scan_positions",
-      "result": [
-        {
-          "symbol": "USDC",
-          "address": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
-          "decimals": 6,
-          "amount": 19000.0,
-          "source": "eth_call balanceOf"
-        }
-      ]
+      "result": {
+        "address": "0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf",
+        "chain": "sepolia",
+        "positions": [
+          {
+            "symbol": "WETH",
+            "address": "0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c",
+            "decimals": 18,
+            "amount": 0.01,
+            "source": "eth_call balanceOf"
+          }
+        ],
+        "sources": [
+          "eth_call balanceOf on sepolia"
+        ]
+      }
     },
     {
       "run": 2,
       "action": "rank_venues",
-      "degraded": true,
-      "poolCount": 15641,
-      "ranked": [
-        {
-          "venue_id": "mock-sky",
-          "name": "Mock Sky Savings",
-          "address": "0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e",
-          "apy": 5.12,
-          "apySource": "config override (degrade path)",
-          "maxDeposit": 5000
-        },
-        {
-          "venue_id": "mock-spark",
-          "name": "Mock Spark",
-          "address": "0x0000000000000000000000000000000000000000",
-          "apy": 4.87,
-          "apySource": "config override (degrade path)",
-          "maxDeposit": 5000
-        },
-        {
-          "venue_id": "mock-aave",
-          "name": "Mock Aave V3",
-          "address": "0x0000000000000000000000000000000000000000",
-          "apy": 3.94,
-          "apySource": "config override (degrade path)",
-          "maxDeposit": 5000
-        }
-      ]
+      "result": {
+        "chain": "sepolia",
+        "ranked": [
+          {
+            "venue_id": "aave-v3-weth",
+            "name": "Aave V3 (WETH supply)",
+            "address": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+            "apy": 1.43,
+            "apySource": "defillama aave-v3/WETH tvl=$723,338,851",
+            "addressable": true,
+            "maxDeposit": 0.02
+          }
+        ],
+        "poolCount": 15648
+      }
     },
     {
       "run": 3,
-      "action": "deposit ALLOW mock-sky",
-      "decision": "ALLOW",
-      "tx": "0xc137e53fb1abde2af4bebbd4f2874a6fb9f34872ac5898be4979f7a6e0f1e6c8",
-      "link": "https://sepolia.etherscan.io/tx/0xc137e53fb1abde2af4bebbd4f2874a6fb9f34872ac5898be4979f7a6e0f1e6c8",
+      "action": "deposit ALLOW aave-v3-weth",
+      "approve_tx": null,
+      "tx": "0x06d9288e821f98adc86128cfc99e941157f6350f59de80df24f0c5597b0f826f",
       "sponsored": true,
-      "verified": {
-        "ok": true,
-        "venue_id": "mock-sky",
-        "shares": 2000000000000000000000,
-        "shares_formatted": 2000.0,
-        "source": "eth_call balanceOf onchain"
-      },
-      "shares": 2000.0
+      "decision": "ALLOW",
+      "txs": 2,
+      "shares": 0.005
     },
     {
       "run": 4,
+      "action": "withdraw ALLOW aave-v3-weth",
+      "tx": "0x41d8900d160bf3f8accd56c4ea04751de7393bd2df2fff3d22c0f5951d9288f1",
+      "sponsored": true,
+      "decision": "ALLOW",
+      "txs": 1
+    },
+    {
+      "run": 5,
       "action": "deposit DENY unlisted-venue",
       "decision": "DENY",
       "reason": "venue unlisted-venue disabled",
       "txs": 0
     },
     {
-      "run": 5,
+      "run": 6,
       "action": "verify_position",
       "result": {
         "ok": true,
-        "venue_id": "mock-sky",
-        "shares": 2000000000000000000000,
-        "shares_formatted": 2000.0,
-        "source": "eth_call balanceOf onchain"
+        "venue_id": "aave-v3-weth",
+        "shares": 2999999999999999,
+        "shares_formatted": 0.003,
+        "source": "eth_call balanceOf onchain (0x5b071b59\u2026)"
       }
     },
     {
-      "run": 6,
-      "action": "org wallet ETH balance",
-      "eth": 0.016
+      "run": 7,
+      "action": "org wallet WETH balance",
+      "weth": 0.007
     }
   ]
 }
