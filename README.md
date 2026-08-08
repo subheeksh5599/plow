@@ -279,7 +279,7 @@ for APY context; they can never move funds.
 | Audit trail | ✅ Real | Every decision JSONL-logged with checks + outcome |
 | Human-in-the-loop | ✅ Real | `list_escalations` / `resolve_escalation` (MCP + CLI) |
 | Scheduled deposits | ✅ Real | `scripts/plow_scheduler.py` — scan → rank → gate → deposit loop |
-| Multi-chain | ✅ Real | Base Sepolia (84532) scan + deposit; see evidence table |
+| Multi-chain | ✅ Engine live | Chain-abstracted (Base Sepolia 84532 policy, RPC override, `--chain`); Base demo deposit pending testnet bridge relay |
 | Venues | ⚠️ Mock | Testnet stand-ins (MockSkySavings/MockUSDC) |
 | Mainnet venues | 🟡 Config-gated | Real adapters (Sky sUSDS / Ethena sUSDe / Aave V3) ready in `policies.mainnet.example.json` — audit before use |
 | External audit | ⚠️ Not done | Do not use with real funds |
@@ -410,8 +410,9 @@ plow/
 - **✅ Real venues on mainnet** — adapters for Sky sUSDS, Ethena sUSDe, Aave V3
   USDC configured in `policies.mainnet.example.json` (config-gated, audit before
   any real funds). The rank already uses their live mainnet APYs.
-- **✅ Multi-chain** — Base Sepolia (84532) scan + sponsored deposit, live in the
-  evidence table.
+- **✅ Multi-chain engine** — chain-abstracted execution (chainId 84532 policy,
+  RPC override, `--chain` flag, per-chain evidence). The Base Sepolia demo
+  deposit is configured and ready; it waits on a working testnet bridge relay.
 - **✅ Scheduled deposits** — `scripts/plow_scheduler.py`: recurring scan → rank →
   gate → deposit loop with policy budgets.
 - **✅ Escalation loop** — `list_escalations` / `resolve_escalation` MCP tools +

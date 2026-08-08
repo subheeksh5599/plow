@@ -393,10 +393,10 @@ export default function Page() {
               </div>
             </li>
             <li>
-              <div className="phase">Done</div>
+              <div className="phase">Engine</div>
               <div className="what">
                 <h4>Multi-chain</h4>
-                <p>Base Sepolia (84532) scan + sponsored deposit — same policy gate, live evidence.</p>
+                <p>Chain-abstracted execution (Base Sepolia config-ready); Base demo deposit pending testnet bridge relay.</p>
               </div>
             </li>
             <li>
