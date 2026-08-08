@@ -45,53 +45,62 @@ def test_gate_deny_disabled_venue():
 
 
 def test_gate_deny_unaddressed_venue():
-    policy = plow.load_policy()
-    v = plow.gate_deposit(policy, "mock-spark", 100.0, {"wouldRevert": False})
+    # an enabled venue with a zero address is rank-only — DENY before any tx
+    policy = {
+        "window": {"start": 0, "end": 23},
+        "functionAllowlist": ["supply(address,uint256,address,uint16)"],
+        "venues": [{"id": "rank-only", "name": "Rank Only", "address": "0x0000000000000000000000000000000000000000", "tokenAddress": "0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c", "enabled": True, "maxDeposit": 1, "budget": 5, "budgetPeriodHours": 24, "defillamaProject": "aave-v3", "defillamaSymbol": "WETH"}],
+    }
+    v = plow.gate_deposit(policy, "rank-only", 0.01, {"wouldRevert": False})
     check("rank-only venue denied", v["decision"] == "DENY", str(v))
     check("deny reason executable", "executable" in v["reason"], v["reason"])
 
 
 def test_gate_deny_zero_amount():
     policy = plow.load_policy()
-    v = plow.gate_deposit(policy, "mock-sky", 0, {"wouldRevert": False})
+    v = plow.gate_deposit(policy, "aave-v3-weth", 0, {"wouldRevert": False})
     check("zero amount denied", v["decision"] == "DENY")
 
 
 def test_gate_deny_cap_exceeded():
     policy = plow.load_policy()
-    v = plow.gate_deposit(policy, "mock-sky", 99999.0, {"wouldRevert": False})
+    v = plow.gate_deposit(policy, "aave-v3-weth", 1.0, {"wouldRevert": False})  # maxDeposit 0.02
     check("cap exceeded denied", v["decision"] == "DENY", v["reason"])
 
 
 def test_gate_deny_simulate_reverted():
     policy = plow.load_policy()
-    v = plow.gate_deposit(policy, "mock-sky", 100.0, {"wouldRevert": True})
+    v = plow.gate_deposit(policy, "aave-v3-weth", 0.01, {"wouldRevert": True})
     check("reverting simulate denied", v["decision"] == "DENY")
 
 
 def test_gate_deny_simulate_unavailable_fail_closed():
     policy = plow.load_policy()
-    v = plow.gate_deposit(policy, "mock-sky", 100.0, None)
+    v = plow.gate_deposit(policy, "aave-v3-weth", 0.01, None)
     check("missing simulation fails closed", v["decision"] == "DENY")
 
 
 def test_gate_allow_in_policy():
     policy = plow.load_policy()
-    v = plow.gate_deposit(policy, "mock-sky", 100.0, {"wouldRevert": False, "gasEstimate": 80000})
-    check("in-policy deposit allowed", v["decision"] == "ALLOW", str(v))
+    v = plow.gate_deposit(policy, "aave-v3-weth", 0.01, {"wouldRevert": False, "gasEstimate": 400000})
+    check("in-policy supply allowed", v["decision"] == "ALLOW", str(v))
     check("all checks ok", all(c["ok"] for c in v["checks"]))
 
 
 def test_gate_escalate_over_budget():
-    # force spent > budget by writing audit records into a temp audit dir
+    # deterministic custom policy: budget 1000, cap 5000 — only budget can fail
+    policy = {
+        "window": {"start": 0, "end": 23},
+        "functionAllowlist": ["supply(address,uint256,address,uint16)"],
+        "venues": [{"id": "v1", "name": "V1", "address": "0x1111111111111111111111111111111111111111", "tokenAddress": "0x2222222222222222222222222222222222222222", "functionName": "supply", "enabled": True, "maxDeposit": 5000, "budget": 1000, "budgetPeriodHours": 24, "defillamaProject": "aave-v3", "defillamaSymbol": "WETH"}],
+    }
     tmp = tempfile.mkdtemp()
     old_dir = plow.AUDIT_DIR
     plow.AUDIT_DIR = tmp
     try:
-        for _ in range(60):
-            plow.audit_append({"venue_id": "mock-sky", "amount": 200.0, "decision": "ALLOW", "ts": int(__import__("time").time())})
-        policy = plow.load_policy()
-        v = plow.gate_deposit(policy, "mock-sky", 100.0, {"wouldRevert": False})
+        for _ in range(6):
+            plow.audit_append({"venue_id": "v1", "amount": 200.0, "decision": "ALLOW", "ts": int(__import__("time").time())})
+        v = plow.gate_deposit(policy, "v1", 100.0, {"wouldRevert": False})
         check("over budget escalates", v["decision"] == "ESCALATE", v["reason"])
     finally:
         plow.AUDIT_DIR = old_dir
@@ -111,7 +120,8 @@ def test_abi_selector_deposit():
     check("calldata length", len(calldata) == 2 + 8 + 64)
 
 
-def test_rank_degrades_when_no_pools():
+def test_rank_excludes_unmatched_venues():
+    """No live pool for a venue → excluded, never ranked on made-up rates."""
     async def run():
         plow._yields_cache["ts"] = time.time()  # honor the cache — no live fetch
         plow._yields_cache["data"] = []
@@ -119,17 +129,35 @@ def test_rank_degrades_when_no_pools():
         return r
 
     r = asyncio.run(run())
-    check("rank returns venues", len(r["ranked"]) >= 2, str(r))
-    check("rank degraded flag (no pools)", r["degraded"] is True)
-    check("rank sorted desc", r["ranked"][0]["apy"] >= r["ranked"][-1]["apy"])
-    check("rank degrade source", "degrade" in r["ranked"][0]["apySource"])
+    check("no fabricated venues ranked", r["ranked"] == [], str(r))
+    check("pool count zero", r["poolCount"] == 0)
+
+
+def test_rank_fails_loudly_on_feed_failure():
+    """The yield feed is required — no silent fallback to fake rates."""
+    orig = plow.defillama_yields
+
+    async def run():
+        async def boom():
+            raise RuntimeError("feed unreachable")
+        plow.defillama_yields = boom
+        try:
+            await plow.rank_venues()
+            return None
+        except RuntimeError as e:
+            return str(e)
+
+    try:
+        r = asyncio.run(run())
+    finally:
+        plow.defillama_yields = orig
+    check("feed failure propagates", r is not None and "unreachable" in r, str(r))
 
 
 def test_rank_live_when_pools_match():
-    # fixture: real DefiLlama-shaped pools for the configured hints
+    # fixture: real DefiLlama-shaped pool for the configured venue hint
     fixture = [
-        {"project": "sky-lending", "symbol": "SUSDS", "chain": "Ethereum", "apy": 3.52, "apyBase": 3.52, "tvlUsd": 1_000_000_000},
-        {"project": "ethena-usde", "symbol": "SUSDE", "chain": "Ethereum", "apy": 4.03, "apyBase": 4.03, "tvlUsd": 2_000_000_000},
+        {"project": "aave-v3", "symbol": "WETH", "chain": "Ethereum", "apy": 2.31, "apyBase": 2.31, "tvlUsd": 2_400_000_000},
         {"project": "aave-v3", "symbol": "USDC", "chain": "Ethereum", "apy": 3.46, "apyBase": 3.46, "tvlUsd": 500_000_000},
     ]
 
@@ -140,11 +168,9 @@ def test_rank_live_when_pools_match():
         return r
 
     r = asyncio.run(run())
-    check("rank NOT degraded with live pools", r["degraded"] is False, str(r))
-    for entry in r["ranked"]:
-        check(f"live source for {entry['venue_id']}", "defillama" in entry["apySource"], entry["apySource"])
-        check(f"positive apy {entry['venue_id']}", entry["apy"] > 0)
-    check("rank order", r["ranked"][0]["apy"] == 4.03, str(r["ranked"][0]))
+    check("aave-v3-weth ranked live", len(r["ranked"]) == 1 and r["ranked"][0]["venue_id"] == "aave-v3-weth", str(r["ranked"]))
+    check("live source", "defillama" in r["ranked"][0]["apySource"], r["ranked"][0]["apySource"])
+    check("apy matches pool", r["ranked"][0]["apy"] == 2.31, str(r["ranked"][0]))
 
 
 def test_scan_zero_positions_no_crash():
@@ -162,9 +188,9 @@ def test_escalation_lifecycle():
 
     tmp = tempfile.mkdtemp()
     plow.AUDIT_DIR = tmp  # module constant is bound at import — patch it directly
-    plow.audit_append({"venue_id": "mock-sky", "amount": 9000.0, "chain": "sepolia", "decision": "ESCALATE", "reason": "over per-period budget", "intent_key": "esc-test-1"})
+    plow.audit_append({"venue_id": "aave-v3-weth", "amount": 9000.0, "chain": "sepolia", "decision": "ESCALATE", "reason": "over per-period budget", "intent_key": "esc-test-1"})
     listed = plow.list_escalations()
-    check("escalation listed", listed["count"] == 1 and listed["escalations"][0]["venue_id"] == "mock-sky", str(listed))
+    check("escalation listed", listed["count"] == 1 and listed["escalations"][0]["venue_id"] == "aave-v3-weth", str(listed))
 
     async def run():
         return await plow.resolve_escalation(0, approve=False)
@@ -213,11 +239,10 @@ def test_scheduler_picks_addressable_venue():
         return {
             "chain": "sepolia",
             "ranked": [
-                {"venue_id": "mock-spark", "name": "Mock Spark", "apy": 4.03, "addressable": False, "maxDeposit": 5000},
-                {"venue_id": "mock-sky", "name": "Mock Sky Savings", "apy": 3.52, "addressable": True, "maxDeposit": 5000},
+                {"venue_id": "rank-only-v2", "name": "Rank Only", "apy": 4.03, "addressable": False, "maxDeposit": 5000},
+                {"venue_id": "aave-v3-weth", "name": "Aave V3", "apy": 2.31, "addressable": True, "maxDeposit": 5000},
             ],
-            "degraded": False,
-            "poolCount": 0,
+            "poolCount": 2,
         }
 
     import importlib
@@ -229,7 +254,7 @@ def test_scheduler_picks_addressable_venue():
     sched.execute_deposit = fake_execute
     r = asyncio.run(sched.run_once(max_deposit=1000.0, wallet="0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf"))
     check("scheduler executed a deposit", r.get("decision") == "ALLOW", str(r))
-    check("scheduler picked addressable venue", calls["execute"] == ("mock-sky", 1000.0), str(calls["execute"]))
+    check("scheduler picked addressable venue", calls["execute"] == ("aave-v3-weth", 1000.0), str(calls["execute"]))
 
 
 if __name__ == "__main__":
@@ -245,7 +270,8 @@ if __name__ == "__main__":
     test_gate_escalate_over_budget()
     test_byok_precedence()
     test_abi_selector_deposit()
-    test_rank_degrades_when_no_pools()
+    test_rank_excludes_unmatched_venues()
+    test_rank_fails_loudly_on_feed_failure()
     test_rank_live_when_pools_match()
     test_scan_zero_positions_no_crash()
     test_escalation_lifecycle()
