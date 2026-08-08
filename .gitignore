@@ -1,0 +1,32 @@
+# secrets
+.env
+*.pem
+node_modules/
+
+# build output
+frontend/out/
+frontend/.next/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# local-only working docs (never pushed)
+/*checklist*.md
+/*pitch*.md
+/DEMO_SCRIPT.md
+/SUBMISSION.md
+
+# runtime artifacts
+audits/
+evidence.json
+__pycache__/
+*.pyc
+.venv/
+.vercel
+docs/demo/*.mp3
+docs/demo/scene_*.mp4
+docs/demo/p*.wav
+docs/demo/list.txt
+docs/demo/alist.txt
+docs/demo/video_raw.mp4
+docs/demo/audio_full.wav
