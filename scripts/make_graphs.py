@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate README graphs from Plow's own run data -> docs/media/N.png.
 
-Data sources: evidence.json (runs) + audits/plow-audit.jsonl (decisions).
+Data sources: evidence-sepolia.json (runs) + audits/plow-audit.jsonl (decisions).
 Re-run after any demo run so graphs never carry stale numbers.
 """
 import json
@@ -37,7 +37,7 @@ plt.rcParams.update({
 
 
 def load_evidence() -> dict:
-    with open(os.path.join(ROOT, "evidence.json")) as f:
+    with open(os.path.join(ROOT, "evidence-sepolia.json")) as f:
         return json.load(f)
 
 

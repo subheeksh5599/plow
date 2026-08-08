@@ -1,32 +1,11 @@
 #!/usr/bin/env python3
-"""Plow live demo runner — mints seed capital, then runs scan -> rank -> gate ->
-deposit (ALLOW + DENY) -> verify through KeeperHub on Sepolia. Writes evidence JSON."""
+"""Plow live demo runner — scan -> rank -> gate -> deposit (ALLOW + DENY) ->
+verify through KeeperHub, on sepolia or base-sepolia. Writes evidence JSON."""
+import argparse
 import asyncio
 import json
 import os
 import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server"))
-
-from plow import (  # noqa: E402
-    ABI_MOCK_USDC,
-    CHAIN,
-    CHAIN_ID,
-    audit_append,
-    execute_deposit,
-    kh_contract_call,
-    kh_execution_status,
-    kh_wallet_address,
-    rank_venues,
-    scan_positions,
-    verify_position,
-)
-
-MOCK_USDC = os.environ.get("PLOW_MOCK_USDC", "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9")
-ORG = os.environ.get("PLOW_ORG_WALLET", "0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf")
-MINT_AMOUNT = 10_000  # USDC
-DEPOSIT_AMOUNT = 1_000.0
-DENY_VENUE = "unlisted-venue"
 
 
 def _load_env(path=".env"):
@@ -39,79 +18,94 @@ def _load_env(path=".env"):
                     os.environ.setdefault(k.strip(), v.strip())
 
 
-async def main():
-    evidence = {"chain": CHAIN, "chainId": CHAIN_ID, "org_wallet": ORG, "runs": []}
+def main():
+    p = argparse.ArgumentParser(description="Plow live demo runner")
+    p.add_argument("--chain", default="sepolia", choices=["sepolia", "base-sepolia"])
+    p.add_argument("--mint", type=float, default=10_000.0)
+    p.add_argument("--deposit", type=float, default=1_000.0)
+    p.add_argument("--deny-venue", default="unlisted-venue")
+    p.add_argument("--deposit-venue", default="mock-sky")
+    args = p.parse_args()
 
-    # ---- run 0: mint seed capital (sponsored contract-call, simulate first) — skip if already funded
-    print("== 0. mint seed MockUSDC to org wallet ==")
-    scan0 = await scan_positions(ORG)
-    held = next((p["amount"] for p in scan0["positions"] if p["symbol"] == "USDC"), 0.0)
-    if held >= MINT_AMOUNT:
-        print(f"   already funded ({held} USDC) — skipping mint")
-        evidence["runs"].append({"run": 0, "action": f"mint {MINT_AMOUNT} MockUSDC", "skipped": True, "held": held})
-    else:
-        sim = await kh_contract_call(MOCK_USDC, "mint", [ORG, MINT_AMOUNT * 10**6], ABI_MOCK_USDC, simulate=True)
-        print("   simulate:", {k: sim.get(k) for k in ("status", "gasEstimate", "wouldRevert")})
-        if sim.get("wouldRevert") is not False:
-            print("   FAIL: mint simulate reverted"); sys.exit(1)
-        exec_mint = await kh_contract_call(MOCK_USDC, "mint", [ORG, MINT_AMOUNT * 10**6], ABI_MOCK_USDC)
-        mint_id = exec_mint.get("executionId")
-        mint_status = await kh_execution_status(mint_id)
-        evidence["runs"].append({"run": 0, "action": f"mint {MINT_AMOUNT} MockUSDC -> org wallet", "executionId": mint_id, "tx": mint_status.get("transactionHash"), "link": mint_status.get("transactionLink"), "sponsored": mint_status.get("sponsored")})
-        print(f"   mint tx: {mint_status.get('transactionHash')} sponsored={mint_status.get('sponsored')}")
+    _load_env()
+    os.environ["KEEPERHUB_CHAIN"] = args.chain
+    if args.chain == "base-sepolia":
+        os.environ["KEEPERHUB_CHAIN_ID"] = "84532"
+        os.environ["KEEPERHUB_RPC_OVERRIDE"] = "https://base-sepolia-rpc.publicnode.com"
+        os.environ["PLOW_POLICY_PATH"] = os.path.join("server", "policies.base.json")
+        os.environ["PLOW_BLOCKSCOUT"] = "https://base-sepolia.blockscout.com/api"
 
-    # ---- run 1: scan
-    print("\n== 1. scan_positions ==")
-    scan = await scan_positions(ORG)
-    print(f"   positions: {scan['positions']}")
-    evidence["runs"].append({"run": 1, "action": "scan_positions", "result": scan["positions"]})
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server"))
+    import plow  # env is set before import → CHAIN/CHAIN_ID/RPC are correct
 
-    # ---- run 2: rank
-    print("\n== 2. rank_venues ==")
-    rank = await rank_venues()
-    for v in rank["ranked"]:
-        print(f"   {v['apy']:>5}%  {v['name']:<18} {v['apySource']}")
-    print(f"   degraded={rank['degraded']} pools={rank['poolCount']}")
-    evidence["runs"].append({"run": 2, "action": "rank_venues", "degraded": rank["degraded"], "poolCount": rank["poolCount"], "ranked": rank["ranked"]})
+    ORG = os.environ.get("PLOW_ORG_WALLET", "0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf")
+    MINT_AMOUNT = args.mint
+    DEPOSIT_AMOUNT = args.deposit
 
-    # ---- run 3: gated deposit (ALLOW path)
-    print(f"\n== 3. execute_deposit mock-sky {DEPOSIT_AMOUNT} ==")
-    dep = await execute_deposit("mock-sky", DEPOSIT_AMOUNT, address=ORG)
-    print(f"   decision={dep.get('decision')} reason={dep.get('reason')}")
-    print(f"   tx={dep.get('transaction_hash')} sponsored={dep.get('sponsored')}")
-    print(f"   verified={dep.get('verified')}")
-    evidence["runs"].append({"run": 3, "action": "deposit ALLOW mock-sky", "decision": dep.get("decision"), "tx": dep.get("transaction_hash"), "link": dep.get("transaction_link"), "sponsored": dep.get("sponsored"), "verified": dep.get("verified"), "shares": dep.get("verified", {}).get("shares_formatted")})
+    async def run():
+        evidence = {"chain": plow.CHAIN, "chainId": plow.CHAIN_ID, "org_wallet": ORG, "runs": []}
 
-    # ---- run 4: DENY path (zero txs)
-    print(f"\n== 4. execute_deposit {DENY_VENUE} (out of policy) ==")
-    deny = await execute_deposit(DENY_VENUE, 100.0, address=ORG)
-    print(f"   decision={deny.get('decision')} reason={deny.get('reason')} txs={deny.get('txs')}")
-    evidence["runs"].append({"run": 4, "action": "deposit DENY unlisted-venue", "decision": deny.get("decision"), "reason": deny.get("reason"), "txs": deny.get("txs")})
+        print(f"== 0. mint seed MockUSDC on {args.chain} ==")
+        scan0 = await plow.scan_positions(ORG)
+        held = next((pp["amount"] for pp in scan0["positions"] if pp["symbol"] == "USDC"), 0.0)
+        if held >= MINT_AMOUNT:
+            print(f"   already funded ({held} USDC) — skipping mint")
+            evidence["runs"].append({"run": 0, "action": f"mint {MINT_AMOUNT} MockUSDC", "skipped": True, "held": held})
+        else:
+            sim = await plow.kh_contract_call(plow.MOCK_USDC, "mint", [ORG, int(MINT_AMOUNT * 10**6)], plow.ABI_MOCK_USDC, simulate=True)
+            print("   simulate:", {k: sim.get(k) for k in ("status", "gasEstimate", "wouldRevert")})
+            if sim.get("wouldRevert") is not False:
+                print("   FAIL: mint simulate reverted")
+                sys.exit(1)
+            exec_mint = await plow.kh_contract_call(plow.MOCK_USDC, "mint", [ORG, int(MINT_AMOUNT * 10**6)], plow.ABI_MOCK_USDC)
+            mint_id = exec_mint.get("executionId")
+            mint_status = await plow.kh_execution_status(mint_id)
+            evidence["runs"].append({"run": 0, "action": f"mint {MINT_AMOUNT} MockUSDC -> org wallet", "executionId": mint_id, "tx": mint_status.get("transactionHash"), "link": mint_status.get("transactionLink"), "sponsored": mint_status.get("sponsored")})
+            print(f"   mint tx: {mint_status.get('transactionHash')} sponsored={mint_status.get('sponsored')}")
 
-    # ---- run 5: verify
-    print("\n== 5. verify_position ==")
-    verified = await verify_position(ORG, "mock-sky")
-    print(f"   shares={verified.get('shares_formatted')} sUSDS source={verified.get('source')}")
-    evidence["runs"].append({"run": 5, "action": "verify_position", "result": verified})
+        print("\n== 1. scan_positions ==")
+        scan = await plow.scan_positions(ORG)
+        for pp in scan["positions"]:
+            print(f"   {pp['symbol']:<5} {pp['amount']:>12,.2f} @ {pp['address'][:10]}")
+        evidence["runs"].append({"run": 1, "action": "scan_positions", "result": scan})
 
-    # ---- run 6: wallet balance (gas affordability note)
-    print("\n== 6. org wallet balance ==")
-    bal = await _native_balance()
-    print(f"   {bal} ETH")
-    evidence["runs"].append({"run": 6, "action": "org wallet ETH balance", "eth": bal})
+        print("\n== 2. rank_venues ==")
+        rank = await plow.rank_venues()
+        for v in rank["ranked"]:
+            flag = " · degrade" if "degrade" in v["apySource"] else ""
+            print(f"   {v['apy']:>5.2f}%  {v['name']:<18}{flag}")
+        print(f"   degraded={rank['degraded']} pools={rank['poolCount']}")
+        evidence["runs"].append({"run": 2, "action": "rank_venues", "result": rank})
 
-    with open(os.path.join(os.path.dirname(__file__), "..", "evidence.json"), "w") as f:
-        json.dump(evidence, f, indent=2)
-    print("\nEvidence written to evidence.json")
+        print(f"\n== 3. execute_deposit {args.deposit_venue} {DEPOSIT_AMOUNT:.0f} ==")
+        dep = await plow.execute_deposit(args.deposit_venue, DEPOSIT_AMOUNT, address=ORG)
+        print(f"   decision={dep.get('decision')} reason={dep.get('reason')}")
+        if dep.get("ok"):
+            print(f"   tx={dep.get('transaction_hash')} sponsored={dep.get('sponsored')}")
+            print(f"   verified={dep.get('verified')}")
+        evidence["runs"].append({"run": 3, "action": f"deposit {dep.get('decision')} {args.deposit_venue}", "tx": dep.get("transaction_hash"), "sponsored": dep.get("sponsored"), "decision": dep.get("decision"), "txs": dep.get("txs"), "shares": (dep.get("verified") or {}).get("shares_formatted")})
 
+        print(f"\n== 4. execute_deposit {args.deny_venue} (out of policy) ==")
+        deny = await plow.execute_deposit(args.deny_venue, 100.0, address=ORG)
+        print(f"   decision={deny.get('decision')} reason={deny.get('reason')} txs={deny.get('txs')}")
+        evidence["runs"].append({"run": 4, "action": f"deposit {deny.get('decision')} {args.deny_venue}", "decision": deny.get("decision"), "reason": deny.get("reason"), "txs": deny.get("txs")})
 
-async def _native_balance() -> float:
-    import httpx
-    async with httpx.AsyncClient(timeout=20) as c:
-        r = await c.get(f"https://eth-sepolia.blockscout.com/api?module=account&action=balance&address={ORG}")
-        return float(r.json().get("result", 0)) / 1e18
+        print(f"\n== 5. verify_position ==")
+        ver = await plow.verify_position(ORG, args.deposit_venue)
+        print(f"   shares={ver.get('shares_formatted')} sUSDS source={ver.get('source')}")
+        evidence["runs"].append({"run": 5, "action": "verify_position", "result": ver})
+
+        print("\n== 6. org wallet ETH balance ==")
+        bal = await plow.rpc_native_balance(ORG)
+        print(f"   {bal:.4f} ETH")
+        evidence["runs"].append({"run": 6, "action": "org wallet ETH balance", "eth": bal})
+
+        with open(os.path.join(os.path.dirname(__file__), "..", f"evidence-{args.chain}.json"), "w") as f:
+            json.dump(evidence, f, indent=2, default=str)
+        print(f"\nEvidence written to evidence-{args.chain}.json")
+
+    asyncio.run(run())
 
 
 if __name__ == "__main__":
-    _load_env()
-    asyncio.run(main())
+    main()

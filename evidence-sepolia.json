@@ -1,0 +1,97 @@
+{
+  "chain": "sepolia",
+  "chainId": 11155111,
+  "org_wallet": "0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf",
+  "runs": [
+    {
+      "run": 0,
+      "action": "mint 10000 MockUSDC",
+      "skipped": true,
+      "held": 19000.0
+    },
+    {
+      "run": 1,
+      "action": "scan_positions",
+      "result": [
+        {
+          "symbol": "USDC",
+          "address": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
+          "decimals": 6,
+          "amount": 19000.0,
+          "source": "eth_call balanceOf"
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "action": "rank_venues",
+      "degraded": true,
+      "poolCount": 15641,
+      "ranked": [
+        {
+          "venue_id": "mock-sky",
+          "name": "Mock Sky Savings",
+          "address": "0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e",
+          "apy": 5.12,
+          "apySource": "config override (degrade path)",
+          "maxDeposit": 5000
+        },
+        {
+          "venue_id": "mock-spark",
+          "name": "Mock Spark",
+          "address": "0x0000000000000000000000000000000000000000",
+          "apy": 4.87,
+          "apySource": "config override (degrade path)",
+          "maxDeposit": 5000
+        },
+        {
+          "venue_id": "mock-aave",
+          "name": "Mock Aave V3",
+          "address": "0x0000000000000000000000000000000000000000",
+          "apy": 3.94,
+          "apySource": "config override (degrade path)",
+          "maxDeposit": 5000
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "action": "deposit ALLOW mock-sky",
+      "decision": "ALLOW",
+      "tx": "0xc137e53fb1abde2af4bebbd4f2874a6fb9f34872ac5898be4979f7a6e0f1e6c8",
+      "link": "https://sepolia.etherscan.io/tx/0xc137e53fb1abde2af4bebbd4f2874a6fb9f34872ac5898be4979f7a6e0f1e6c8",
+      "sponsored": true,
+      "verified": {
+        "ok": true,
+        "venue_id": "mock-sky",
+        "shares": 2000000000000000000000,
+        "shares_formatted": 2000.0,
+        "source": "eth_call balanceOf onchain"
+      },
+      "shares": 2000.0
+    },
+    {
+      "run": 4,
+      "action": "deposit DENY unlisted-venue",
+      "decision": "DENY",
+      "reason": "venue unlisted-venue disabled",
+      "txs": 0
+    },
+    {
+      "run": 5,
+      "action": "verify_position",
+      "result": {
+        "ok": true,
+        "venue_id": "mock-sky",
+        "shares": 2000000000000000000000,
+        "shares_formatted": 2000.0,
+        "source": "eth_call balanceOf onchain"
+      }
+    },
+    {
+      "run": 6,
+      "action": "org wallet ETH balance",
+      "eth": 0.016
+    }
+  ]
+}

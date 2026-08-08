@@ -14,7 +14,7 @@ export default function HeroCanvas() {
     const SRC = { x: 110, y: 170 };
     const VAULT = { x: 0, y: 0, w: 210, h: 96 };
     const BEST = { x: 0, y: 0, w: 210, h: 96 };
-    const APY_TARGET = 5.12;
+    const APY_TARGET = 4.03;
     const TX_TARGET = 4;
     const MAX_PARTS = 40;
 

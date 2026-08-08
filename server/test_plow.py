@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 os.environ.setdefault("KH_API_KEY", "kh_test_key")
@@ -41,6 +42,13 @@ def test_gate_deny_disabled_venue():
     policy = plow.load_policy()
     v = plow.gate_deposit(policy, "unlisted-venue", 100.0, {"wouldRevert": False})
     check("disabled venue denied", v["decision"] == "DENY", str(v))
+
+
+def test_gate_deny_unaddressed_venue():
+    policy = plow.load_policy()
+    v = plow.gate_deposit(policy, "mock-spark", 100.0, {"wouldRevert": False})
+    check("rank-only venue denied", v["decision"] == "DENY", str(v))
+    check("deny reason executable", "executable" in v["reason"], v["reason"])
 
 
 def test_gate_deny_zero_amount():
@@ -105,14 +113,38 @@ def test_abi_selector_deposit():
 
 def test_rank_degrades_when_no_pools():
     async def run():
+        plow._yields_cache["ts"] = time.time()  # honor the cache — no live fetch
         plow._yields_cache["data"] = []
         r = await plow.rank_venues()
         return r
 
     r = asyncio.run(run())
     check("rank returns venues", len(r["ranked"]) >= 2, str(r))
-    check("rank degraded flag", r["degraded"] is True)
+    check("rank degraded flag (no pools)", r["degraded"] is True)
     check("rank sorted desc", r["ranked"][0]["apy"] >= r["ranked"][-1]["apy"])
+    check("rank degrade source", "degrade" in r["ranked"][0]["apySource"])
+
+
+def test_rank_live_when_pools_match():
+    # fixture: real DefiLlama-shaped pools for the configured hints
+    fixture = [
+        {"project": "sky-lending", "symbol": "SUSDS", "chain": "Ethereum", "apy": 3.52, "apyBase": 3.52, "tvlUsd": 1_000_000_000},
+        {"project": "ethena-usde", "symbol": "SUSDE", "chain": "Ethereum", "apy": 4.03, "apyBase": 4.03, "tvlUsd": 2_000_000_000},
+        {"project": "aave-v3", "symbol": "USDC", "chain": "Ethereum", "apy": 3.46, "apyBase": 3.46, "tvlUsd": 500_000_000},
+    ]
+
+    async def run():
+        plow._yields_cache["ts"] = time.time()
+        plow._yields_cache["data"] = fixture
+        r = await plow.rank_venues()
+        return r
+
+    r = asyncio.run(run())
+    check("rank NOT degraded with live pools", r["degraded"] is False, str(r))
+    for entry in r["ranked"]:
+        check(f"live source for {entry['venue_id']}", "defillama" in entry["apySource"], entry["apySource"])
+        check(f"positive apy {entry['venue_id']}", entry["apy"] > 0)
+    check("rank order", r["ranked"][0]["apy"] == 4.03, str(r["ranked"][0]))
 
 
 def test_scan_zero_positions_no_crash():
@@ -128,6 +160,7 @@ if __name__ == "__main__":
     print("Plow server tests")
     test_stable_intent_key_deterministic()
     test_gate_deny_unlisted()
+    test_gate_deny_unaddressed_venue()
     test_gate_deny_zero_amount()
     test_gate_deny_cap_exceeded()
     test_gate_deny_simulate_reverted()
@@ -137,6 +170,7 @@ if __name__ == "__main__":
     test_byok_precedence()
     test_abi_selector_deposit()
     test_rank_degrades_when_no_pools()
+    test_rank_live_when_pools_match()
     test_scan_zero_positions_no_crash()
     print(f"\n{len(FAILURES)} failures" if FAILURES else "\nAll tests passed")
     sys.exit(1 if FAILURES else 0)

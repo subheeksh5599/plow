@@ -208,10 +208,9 @@ S3_LINES = [
     ([("✓ ", GREEN), ("read idle ", PURPLE), ("USDC", WHITE), ("     18,000.00", GREEN), ("  @ ", WHITE), ("0x032b4f813F…8dd9", YELLOW)], 0.0),
     ([("→ ", PURPLE), ("1 position(s) on sepolia", WHITE)], 0.0),
     ([("→ ", PURPLE), ("rank venues (defillama yields, live)", WHITE)], 0.0),
-    ([("  1. ", YELLOW), ("Mock Sky Savings", WHITE), ("    5.12%", GREEN), ("  apy · degrade", DIM)], 0.0),
-    ([("  2. ", YELLOW), ("Mock Spark", WHITE), ("          4.87%", GREEN), ("  apy · degrade", DIM)], 0.0),
-    ([("  3. ", YELLOW), ("Mock Aave V3", WHITE), ("        3.94%", GREEN), ("  apy · degrade", DIM)], 0.0),
-    ([("  (no live testnet pools — configured rates, flagged)", DIM)], 0.0),
+    ([("  1. ", YELLOW), ("Mock Spark", WHITE), ("          4.03%", GREEN), ("  apy · DefiLlama live", DIM)], 0.0),
+    ([("  2. ", YELLOW), ("Mock Sky Savings", WHITE), ("    3.52%", GREEN), ("  apy · DefiLlama live", DIM)], 0.0),
+    ([("  3. ", YELLOW), ("Mock Aave V3", WHITE), ("        3.46%", GREEN), ("  apy · DefiLlama live", DIM)], 0.0),
 ]
 
 S4_LINES = [

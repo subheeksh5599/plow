@@ -15,8 +15,8 @@
       "budget": 10000,
       "budgetPeriodHours": 24,
       "apyOverride": 5.12,
-      "defillamaProject": "sky",
-      "defillamaSymbol": "sUSDS"
+      "defillamaProject": "sky-lending",
+      "defillamaSymbol": "SUSDS"
     },
     {
       "id": "mock-spark",
@@ -28,8 +28,8 @@
       "budget": 10000,
       "budgetPeriodHours": 24,
       "apyOverride": 4.87,
-      "defillamaProject": "spark",
-      "defillamaSymbol": "sUSDe"
+      "defillamaProject": "ethena-usde",
+      "defillamaSymbol": "SUSDE"
     },
     {
       "id": "mock-aave",
@@ -41,8 +41,8 @@
       "budget": 10000,
       "budgetPeriodHours": 24,
       "apyOverride": 3.94,
-      "defillamaProject": "aave",
-      "defillamaSymbol": "aUSDC"
+      "defillamaProject": "aave-v3",
+      "defillamaSymbol": "USDC"
     },
     {
       "id": "unlisted-venue",

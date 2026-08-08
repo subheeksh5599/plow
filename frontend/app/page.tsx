@@ -186,35 +186,32 @@ export default function Page() {
             <div className="term-body">
               <span className="dim">$</span> plow scan 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf --chain sepolia
               {"\n"}
-              <span className="dim">✓</span> <span className="purple">read</span> idle USDC&nbsp;&nbsp; <span className="green">1,250.00</span>{" "}
-              @ 0x9fE4…71a2
-              {"\n"}
-              <span className="dim">✓</span> <span className="purple">read</span> idle USDT&nbsp;&nbsp; <span className="green">640.00</span>{" "}
-              @ 0x9fE4…71a2
+              <span className="dim">✓</span> <span className="purple">read</span> idle USDC&nbsp;&nbsp; <span className="green">18,000.00</span>{" "}
+              @ 0x032b4f81…8dd9
               {"\n"}
               <span className="dim">→</span> <span className="purple">rank</span> venues (defillama yields, live)
               {"\n"}
-              &nbsp;&nbsp;<span className="yellow">1.</span> Sky Savings (sUSDS)&nbsp;&nbsp;&nbsp;&nbsp; <span className="green">5.12%</span>{" "}
+              &nbsp;&nbsp;<span className="yellow">1.</span> Mock Spark&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span className="green">4.03%</span>{" "}
               apy
               {"\n"}
-              &nbsp;&nbsp;<span className="yellow">2.</span> Spark (sUSDe)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{" "}
-              <span className="green">4.87%</span> apy
+              &nbsp;&nbsp;<span className="yellow">2.</span> Mock Sky Savings&nbsp;&nbsp;&nbsp;&nbsp;{" "}
+              <span className="green">3.52%</span> apy
               {"\n"}
-              &nbsp;&nbsp;<span className="yellow">3.</span> Aave V3 (aUSDC)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{" "}
-              <span className="green">3.94%</span> apy
+              &nbsp;&nbsp;<span className="yellow">3.</span> Mock Aave V3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{" "}
+              <span className="green">3.46%</span> apy
               {"\n"}
-              <span className="dim">$</span> plow deposit --venue sky-savings --amount 1000
+              <span className="dim">$</span> plow deposit --venue mock-sky --amount 1000
               {"\n"}
               <span className="dim">·</span> <span className="purple">gate</span>&nbsp; venue allowlisted ✓&nbsp; simulate: wouldRevert=false ✓
               {"\n"}
               <span className="dim">·</span> <span className="purple">approve</span> exact 1,000.00 (no max-uint)&nbsp; →{" "}
-              <span className="green">sponsored</span>
+              <span className="green">sponsored</span> 0x6724cd07…5a2c
               {"\n"}
-              <span className="dim">·</span> <span className="purple">deposit</span> 1,000.00 → sUSDS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
-              <span className="green">sponsored</span> 0x8a4c…f35b
+              <span className="dim">·</span> <span className="purple">deposit</span> 1,000.00 → mock-sky&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
+              <span className="green">sponsored</span> 0xc137e53f…e6c8
               {"\n"}
-              <span className="dim">✓</span> <span className="purple">verify</span> balanceOf = <span className="green">1,000.00</span> sUSDS{" "}
-              · block 45183495
+              <span className="dim">✓</span> <span className="purple">verify</span> balanceOf = <span className="green">2,000.00</span> sUSDS{" "}
+              · onchain read
               {"\n"}
               <span className="dim">✓</span> <span className="purple">audit</span>&nbsp; {"{decision:ALLOW, gas:sponsored, outcome:landed, ts:…}"}
               {"\n"}
@@ -396,10 +393,24 @@ export default function Page() {
               </div>
             </li>
             <li>
+              <div className="phase">Done</div>
+              <div className="what">
+                <h4>Multi-chain</h4>
+                <p>Base Sepolia (84532) scan + sponsored deposit — same policy gate, live evidence.</p>
+              </div>
+            </li>
+            <li>
+              <div className="phase">Done</div>
+              <div className="what">
+                <h4>Schedule + escalation</h4>
+                <p>Recurring placement loop (plow_scheduler) and human-in-the-loop resolve (list/resolve_escalation).</p>
+              </div>
+            </li>
+            <li>
               <div className="phase">Next</div>
               <div className="what">
                 <h4>Mainnet path</h4>
-                <p>Real venues (Sky sUSDS), real APY, config-gated live deposits.</p>
+                <p>Real venue adapters (Sky sUSDS, Ethena sUSDe, Aave V3) config-gated; audit before any real funds.</p>
               </div>
             </li>
           </ul>

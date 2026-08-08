@@ -110,6 +110,27 @@ async def _verify(args):
         print(f"✗ verify failed: {result.get('error','')}")
 
 
+async def _escalations(args):
+    from plow import list_escalations
+    result = list_escalations()
+    if args.json:
+        _out_json(result)
+        return
+    if not result["escalations"]:
+        print("✓ no pending escalations")
+    for e in result["escalations"]:
+        print(f"⚠ [{e['index']}] {e['venue_id']} {e['amount']:,.2f} · {e.get('reason','')}")
+
+
+async def _resolve(args):
+    from plow import resolve_escalation
+    result = await resolve_escalation(args.index, args.approve)
+    if args.json:
+        _out_json(result)
+        return
+    print(f"{'✓ APPROVED' if result.get('decision') == 'ALLOW' else ('✓ ' + str(result.get('decision')))}  {result.get('reason', result.get('error',''))}")
+
+
 def main():
     p = argparse.ArgumentParser(prog="plow", description="Plow — policy-gated yield deposits via KeeperHub")
     p.add_argument("--json", action="store_true", help="raw structured output")
@@ -133,6 +154,15 @@ def main():
     v.add_argument("--venue", required=True)
     v.add_argument("--address")
     v.set_defaults(fn=_verify)
+
+    e = sub.add_parser("escalations", help="list pending ESCALATE decisions")
+    e.set_defaults(fn=_escalations)
+
+    r = sub.add_parser("resolve", help="approve/reject a pending escalation")
+    r.add_argument("--index", type=int, required=True)
+    r.add_argument("--approve", action="store_true", help="approve (re-run gated deposit)")
+    r.add_argument("--reject", action="store_true", help="reject")
+    r.set_defaults(fn=_resolve)
 
     args = p.parse_args()
     _load_env()

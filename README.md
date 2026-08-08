@@ -8,7 +8,7 @@
 [![Sepolia: MockSkySavings](https://img.shields.io/badge/📜_Sepolia-MockSkySavings-14151a)](https://sepolia.etherscan.io/address/0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e)
 [![Sepolia: MockUSDC](https://img.shields.io/badge/📜_Sepolia-MockUSDC-14151a)](https://sepolia.etherscan.io/address/0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9)
 [![License: MIT](https://img.shields.io/badge/license-MIT-533afd.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-20%20passing-3fb950)
+![Tests](https://img.shields.io/badge/tests-24%20passing-3fb950)
 ![Stack](https://img.shields.io/badge/Python%20·%20Solidity%20·%20Next.js-1f1f23)
 ![KeeperHub](https://img.shields.io/badge/KeeperHub-execution%20layer-533afd)
 ![Sepolia](https://img.shields.io/badge/Sepolia-testnet-533afd)
@@ -64,9 +64,9 @@ $ plow scan 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf --chain sepolia
 ✓ read idle USDC   20,000.00  @ 0x032b4f…28dd9
 
 $ plow rank
-5.12%  Mock Sky Savings   config override (degrade path)
-4.87%  Mock Spark         config override (degrade path)
-3.94%  Mock Aave V3       config override (degrade path)
+4.03%  Mock Spark          DefiLlama live (Ethereum)
+3.52%  Mock Sky Savings    DefiLlama live (Ethereum)
+3.46%  Mock Aave V3        DefiLlama live (Ethereum)
 
 $ plow deposit --venue mock-sky --amount 1000
 · gate  venue allowlisted ✓  simulate: wouldRevert=false ✓
@@ -211,8 +211,9 @@ DENY row is proof too — the stop broadcast nothing.
 | Component | Technology | Responsibility |
 |---|---|---|
 | Plow server | Python 3.12, httpx | KeeperHub REST client, BYOK, policy gate, scan/rank engine, audit store |
-| MCP surface | JSON-RPC over HTTP | `scan_positions`, `rank_venues`, `execute_deposit`, `verify_position` tools |
+| MCP surface | JSON-RPC over HTTP | `scan_positions`, `rank_venues`, `execute_deposit`, `verify_position`, `list_escalations`, `resolve_escalation` tools |
 | plow CLI | Python, argparse | Terminal demo path — same functions as the MCP tools |
+| plow scheduler | Python | Recurring scan → rank → gated deposit loop (`scripts/plow_scheduler.py`) |
 | MockSkySavings | Solidity 0.8.28 (Foundry) | Deposit USDC → mint sUSDS 1:1, withdraw, rateBps display |
 | MockUSDC | Solidity 0.8.28 (Foundry) | 6-decimal ERC-20 with mint for testnet seeding |
 | KeeperHub | Direct-execution API | Sponsored contract-calls, execution status, audit evidence |
@@ -248,11 +249,19 @@ contracts deploy via Foundry from a throwaway EOA, funded by a single sponsored 
 the org wallet (0xa2957f4c…). The agent itself never holds a private key; it executes through
 KeeperHub's custody.
 
-**6. Testnets have no DefiLlama pools — the degrade path is a feature, not a hack.**
-`yields.llama.fi` covers mainnet pools only. On Sepolia the rank falls back to configured
-rates (5.12 / 4.87 / 3.94) and flags `degraded: true` — the same graceful-degrade contract
-KeeperHub's own spec defines for APY lookup failure. No stale number is ever presented as
-live.
+**6. Testnet APYs are meaningless — so the rank uses the venues' real mainnet
+pools.** DefiLlama has no Sepolia pools. Each allowlisted venue maps to its real
+mainnet counterpart (Sky sUSDS, Ethena sUSDe, Aave V3 USDC) and the rank pulls
+their LIVE APYs from DefiLlama — 4.03 / 3.52 / 3.46 at the time of writing.
+The configured rate is only a degrade fallback when the fetch fails, and the
+`degraded` flag is always surfaced. No stale number is ever presented as live.
+
+**7. A ranked venue is not an executable venue.** The scheduler picked a
+rank-only stand-in and a sponsored call fired at the zero address — caught in
+the audit trail, verified False. The gate now fail-closes on venues without an
+executable address (DENY, zero txs), the rank exposes an `addressable` flag, and
+the scheduler only ever picks addressable venues. Rank-only entries stay visible
+for APY context; they can never move funds.
 
 ---
 
@@ -260,24 +269,26 @@ live.
 
 | Feature | Status | Detail |
 |---|---|---|
-| Position scan | ✅ Real | `eth_call balanceOf` reads on Sepolia |
-| APY ranking | ✅ Real | DefiLlama fetch + cache + degrade path |
-| Policy gate | ✅ Real | Allowlist, cap, budget, window, simulate — ALLOW/DENY/ESCALATE |
+| Position scan | ✅ Real | `eth_call balanceOf` reads on Sepolia + Base Sepolia |
+| APY ranking | ✅ Real | LIVE mainnet DefiLlama pools (Sky sUSDS / Ethena sUSDe / Aave V3 USDC); degrade only on fetch failure |
+| Policy gate | ✅ Real | Allowlist, cap, budget, window, simulate, executable-address — ALLOW/DENY/ESCALATE |
 | Exact approvals | ✅ Real | PREFILL-07 compliant, never max-uint |
-| Sponsored execution | ✅ Real | 4 sponsored txs on Sepolia (`"sponsored": true`) |
-| Onchain verification | ✅ Real | `balanceOf` read-back, 2,000 sUSDS confirmed |
-| Zero-tx DENY | ✅ Real | Out-of-policy venue: nothing broadcast |
+| Sponsored execution | ✅ Real | Sponsored txs on Sepolia + Base Sepolia (`"sponsored": true`) |
+| Onchain verification | ✅ Real | `balanceOf` read-back confirmed onchain |
+| Zero-tx DENY | ✅ Real | Out-of-policy AND rank-only venues: nothing broadcast |
 | Audit trail | ✅ Real | Every decision JSONL-logged with checks + outcome |
-| Venues | ⚠️ Mock | Testnet stand-ins (MockSkySavings/MockUSDC); mainnet venues are the roadmap |
-| Live APY on testnet | ⚠️ Degrade | No DefiLlama Sepolia pools — config overrides, flagged |
-| Mainnet deposits | 🟡 Roadmap | Real venues (Sky sUSDS), real APY, config-gated |
+| Human-in-the-loop | ✅ Real | `list_escalations` / `resolve_escalation` (MCP + CLI) |
+| Scheduled deposits | ✅ Real | `scripts/plow_scheduler.py` — scan → rank → gate → deposit loop |
+| Multi-chain | ✅ Real | Base Sepolia (84532) scan + deposit; see evidence table |
+| Venues | ⚠️ Mock | Testnet stand-ins (MockSkySavings/MockUSDC) |
+| Mainnet venues | 🟡 Config-gated | Real adapters (Sky sUSDS / Ethena sUSDe / Aave V3) ready in `policies.mainnet.example.json` — audit before use |
 | External audit | ⚠️ Not done | Do not use with real funds |
 
 ---
 
 ## Tests
 
-**20 tests passing — 7 Foundry + 13 Python**, all green:
+**24 tests passing — 7 Foundry + 17 Python**, all green:
 
 ```
 === Foundry (contracts) ===
@@ -292,10 +303,11 @@ Ran 7 tests for test/Plow.t.sol:PlowTest
 Suite result: ok. 7 passed; 0 failed
 
 === Python (server) ===
-All tests passed — 13/13
-gate: unlisted DENY, disabled DENY, zero-amount DENY, cap DENY,
-simulate-revert DENY, fail-closed DENY, in-policy ALLOW, over-budget ESCALATE,
-intent-key determinism, BYOK precedence, calldata selectors, rank degrade, scan empty
+All tests passed — 17/17
+gate: unlisted DENY, disabled DENY, rank-only (no executable address) DENY,
+zero-amount DENY, cap DENY, simulate-revert DENY, fail-closed DENY, in-policy
+ALLOW, over-budget ESCALATE, intent-key determinism, BYOK precedence, calldata
+selectors, rank degrade, rank live-APY match, scan empty
 ```
 
 Run them:
@@ -395,12 +407,17 @@ plow/
 
 ## Roadmap
 
-- **Real venues on mainnet** — Sky sUSDS, Spark, Aave V3 supply; live APY instead of the
-  testnet degrade path
-- **Multi-chain** — Base Sepolia scan + deposit (same methodology, chainId 84532)
-- **Scheduled deposits** — recurring yield placement on KeeperHub's schedule triggers
-- **Escalation UI** — human approve/reject for over-budget proposals
-- **Mainnet path** — config-gated live deposits; audit before any real funds
+- **✅ Real venues on mainnet** — adapters for Sky sUSDS, Ethena sUSDe, Aave V3
+  USDC configured in `policies.mainnet.example.json` (config-gated, audit before
+  any real funds). The rank already uses their live mainnet APYs.
+- **✅ Multi-chain** — Base Sepolia (84532) scan + sponsored deposit, live in the
+  evidence table.
+- **✅ Scheduled deposits** — `scripts/plow_scheduler.py`: recurring scan → rank →
+  gate → deposit loop with policy budgets.
+- **✅ Escalation loop** — `list_escalations` / `resolve_escalation` MCP tools +
+  CLI: over-budget proposals pause for a human, approve re-runs the gated deposit.
+- **🟡 Mainnet execution** — flip `KEEPERHUB_CHAIN_ID` + real venue addresses;
+  requires the external audit first. Never run with real funds today.
 
 ---
 

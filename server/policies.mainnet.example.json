@@ -1,0 +1,54 @@
+{
+  "_comment": "REAL mainnet venue adapters — config-gated, NEVER enabled by default. Requires the external audit before use. Do not use with real funds.",
+  "window": { "start": 0, "end": 23 },
+  "functionAllowlist": ["approve(address,uint256)", "supply(address,uint256,address,uint16)", "deposit(uint256,address)", "deposit(uint256)"],
+  "tokens": [
+    { "symbol": "USDC", "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "decimals": 6 },
+    { "symbol": "USDS", "address": "0xdC035D45d973E3EC169d2276DDab16f1e407384F", "decimals": 18 },
+    { "symbol": "sUSDS", "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD", "decimals": 18 }
+  ],
+  "venues": [
+    {
+      "id": "sky-savings",
+      "name": "Sky Savings (sUSDS)",
+      "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+      "tokenAddress": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+      "chainId": 1,
+      "enabled": false,
+      "maxDeposit": 0,
+      "budget": 0,
+      "budgetPeriodHours": 24,
+      "defillamaProject": "sky-lending",
+      "defillamaSymbol": "SUSDS",
+      "note": "ERC-4626: deposit(assets, receiver) — USDS in, sUSDS out. AUDIT BEFORE ENABLING."
+    },
+    {
+      "id": "ethena-susde",
+      "name": "Ethena sUSDe (USDe)",
+      "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+      "tokenAddress": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+      "chainId": 1,
+      "enabled": false,
+      "maxDeposit": 0,
+      "budget": 0,
+      "budgetPeriodHours": 24,
+      "defillamaProject": "ethena-usde",
+      "defillamaSymbol": "SUSDE",
+      "note": "USDe staking: deposit to sUSDe. AUDIT BEFORE ENABLING."
+    },
+    {
+      "id": "aave-v3-usdc",
+      "name": "Aave V3 (USDC supply)",
+      "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+      "tokenAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "chainId": 1,
+      "enabled": false,
+      "maxDeposit": 0,
+      "budget": 0,
+      "budgetPeriodHours": 24,
+      "defillamaProject": "aave-v3",
+      "defillamaSymbol": "USDC",
+      "note": "Aave V3 Pool: supply(asset, amount, onBehalfOf, referralCode). AUDIT BEFORE ENABLING."
+    }
+  ]
+}

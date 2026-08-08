@@ -41,6 +41,7 @@ def active_key() -> str:
 
 
 # ---------------------------------------------------------------- ABIs
+MOCK_USDC = os.environ.get("PLOW_MOCK_USDC", "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9")
 ABI_MOCK_USDC = json.dumps(
     [
         {"type": "function", "name": "approve", "inputs": [{"name": "spender", "type": "address"}, {"name": "amount", "type": "uint256"}], "outputs": [{"type": "bool"}], "stateMutability": "nonpayable"},
@@ -93,6 +94,10 @@ def gate_deposit(policy: dict, venue_id: str, amount: float, simulate: Optional[
     if not venue.get("enabled", True):
         check("allowlist", False, f"venue {venue_id} disabled")
         return {"decision": "DENY", "reason": f"venue {venue_id} disabled", "checks": checks}
+
+    if not venue.get("address") or venue["address"].lower() == "0x" + "0" * 40:
+        check("executable", False, f"venue {venue_id} has no executable address")
+        return {"decision": "DENY", "reason": f"venue {venue_id} has no executable address", "checks": checks}
 
     check("allowlist", True, f"venue {venue_id} allowlisted")
 
@@ -176,6 +181,62 @@ def audit_spent(venue_id: str, period_hours: int) -> float:
 def stable_intent_key(venue_id: str, amount: float, chain: str) -> str:
     h = hashlib.sha256(f"plow:{venue_id}:{amount:.6f}:{chain}".encode()).hexdigest()
     return h[:24]
+
+
+def load_audit() -> list:
+    """Read the audit trail back (empty list if missing)."""
+    path = _audit_path()
+    if not os.path.exists(path):
+        return []
+    out = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    out.append(json.loads(line))
+                except ValueError:
+                    continue
+    return out
+
+
+def list_escalations() -> dict:
+    """Pending ESCALATE decisions awaiting a human (human-in-the-loop)."""
+    pending = [r for r in load_audit() if r.get("decision") == "ESCALATE" and not r.get("resolved")]
+    return {
+        "escalations": [
+            {
+                "index": i,
+                "venue_id": r.get("venue_id"),
+                "amount": r.get("amount"),
+                "chain": r.get("chain"),
+                "reason": r.get("reason"),
+                "intent_key": r.get("intent_key"),
+            }
+            for i, r in enumerate(pending)
+        ],
+        "count": len(pending),
+    }
+
+
+async def resolve_escalation(index: int, approve: bool) -> dict:
+    """Resolve a pending escalation. approve=True re-runs the gated deposit."""
+    records = load_audit()
+    pending_idx = [i for i, r in enumerate(records) if r.get("decision") == "ESCALATE" and not r.get("resolved")]
+    if index >= len(pending_idx):
+        return {"ok": False, "error": f"no pending escalation at index {index}"}
+    pos = pending_idx[index]
+    rec = records[pos]
+    rec["resolved"] = True
+    rec["resolved_ts"] = int(time.time())
+    rec["resolution"] = "APPROVED" if approve else "REJECTED"
+    with open(_audit_path(), "w") as f:
+        for r in records:
+            f.write(json.dumps(r) + "\n")
+    audit_append({"event": "escalation_resolved", "index": index, "decision": rec["resolution"], "venue_id": rec.get("venue_id"), "amount": rec.get("amount"), "intent_key": rec.get("intent_key")})
+    if not approve:
+        return {"ok": True, "decision": "REJECTED", "reason": "rejected by operator"}
+    return await execute_deposit(rec["venue_id"], rec["amount"], auto_approve_escalation=True)
 
 
 # ---------------------------------------------------------------- KeeperHub client
@@ -337,12 +398,24 @@ async def rank_venues(positions: Optional[list] = None) -> dict:
             continue
         apy = None
         source = None
+        want_proj = v.get("defillamaProject", "").lower()
+        want_sym = v.get("defillamaSymbol", "").upper()
+        best = None
         for pool in pools:
-            if str(pool.get("project", "")).lower() == v.get("defillamaProject", "").lower() and pool.get("symbol") == v.get("defillamaSymbol"):
-                tvl = pool.get("tvlUsd", 0)
-                apy = round(float(pool.get("apy", 0)), 2)
-                source = f"defillama {pool.get('project')}/{pool.get('symbol')} tvl={tvl}"
-                break
+            if str(pool.get("project", "")).lower() != want_proj:
+                continue
+            if str(pool.get("symbol", "")).upper() != want_sym:
+                continue
+            # prefer Ethereum pools over L2 lookalikes
+            rank_chain = 0 if str(pool.get("chain", "")) == "Ethereum" else 1
+            if best is None or rank_chain < best[0]:
+                apy_raw = float(pool.get("apy") or pool.get("apyBase") or 0)
+                best = (rank_chain, pool, apy_raw)
+        if best:
+            _, pool, apy_raw = best
+            tvl = pool.get("tvlUsd", 0)
+            apy = round(apy_raw, 2)
+            source = f"defillama {pool.get('project')}/{pool.get('symbol')} tvl=${tvl:,.0f}"
         if apy is None or apy <= 0:
             apy = float(v.get("apyOverride", 0))
             source = "config override (degrade path)"
@@ -353,7 +426,8 @@ async def rank_venues(positions: Optional[list] = None) -> dict:
             "address": v.get("address"),
             "apy": apy,
             "apySource": source,
-            "maxDeposit": v.get("maxDeposit"),
+            "addressable": bool(v.get("address")) and v["address"].lower() != "0x" + "0" * 40,
+            "maxDeposit": v.get("maxDeposit", 0),
         })
     ranked.sort(key=lambda r: r["apy"], reverse=True)
     return {"chain": CHAIN, "ranked": ranked, "degraded": degraded, "poolCount": len(pools)}
@@ -523,6 +597,20 @@ TOOLS = [
         "description": "Read the onchain share balance for an address in a venue.",
         "parameters": {"type": "object", "properties": {"address": {"type": "string"}, "venue_id": {"type": "string"}}, "required": ["address", "venue_id"]},
     },
+    {
+        "name": "list_escalations",
+        "description": "List ESCALATE decisions awaiting a human (human-in-the-loop).",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "resolve_escalation",
+        "description": "Approve or reject a pending escalation; approve re-runs the gated deposit.",
+        "parameters": {
+            "type": "object",
+            "properties": {"index": {"type": "integer"}, "approve": {"type": "boolean"}},
+            "required": ["index", "approve"],
+        },
+    },
 ]
 
 
@@ -540,6 +628,10 @@ async def mcp_call(name: str, args: dict) -> dict:
         )
     if name == "verify_position":
         return await verify_position(args["address"], args["venue_id"])
+    if name == "list_escalations":
+        return list_escalations()
+    if name == "resolve_escalation":
+        return await resolve_escalation(int(args["index"]), bool(args["approve"]))
     raise RuntimeError(f"unknown tool {name}")
 
 
