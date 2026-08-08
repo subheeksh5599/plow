@@ -411,23 +411,31 @@ The frontend is a static export (Next.js 16, `output: export`) — the landing p
 plow/
 ├── server/                # Python agent core
 │   ├── plow.py            # KeeperHub client, BYOK, policy gate, scan/rank,
-│   │                      #   execute/verify, MCP tools, ASGI app
-│   ├── policies.json      # venue allowlist, caps, budgets, window, tokens
-│   └── test_plow.py       # 13 unit tests (plain asserts)
+│   │                      #   execute/verify, escalation, MCP tools, ASGI app
+│   ├── policies.json      # Sepolia venue allowlist, caps, budgets, window
+│   ├── policies.base.json # Base Sepolia policy (config-ready)
+│   ├── policies.mainnet.example.json  # real venue adapters, disabled
+│   └── test_plow.py       # 20 unit tests (plain asserts)
 ├── contracts/             # Solidity (Foundry)
 │   ├── src/MockUSDC.sol   # 6-dec ERC-20 with mint
 │   ├── src/MockSkySavings.sol  # deposit/withdraw/rate venue
 │   └── test/Plow.t.sol    # 7 tests
 ├── scripts/
-│   ├── plow_cli.py        # terminal demo
-│   ├── run_demos.py       # live demo runs → evidence.json
-│   └── make_graphs.py     # README graphs from run data
+│   ├── plow_cli.py        # terminal demo (scan/rank/deposit/verify/escalations)
+│   ├── run_demos.py       # live demo runs → evidence-<chain>.json
+│   ├── make_graphs.py     # README graphs from run data
+│   ├── make_demo_video.py # demo video renderer (PIL + ffmpeg)
+│   ├── plow_scheduler.py  # recurring yield placement loop
+│   └── smoke_test.py      # deployed-API smoke test
 ├── frontend/              # Next.js 16 static export landing
 ├── docs/media/            # README screenshots + graphs
+├── docs/demo/             # demo video + narration assets
 ├── audits/                # plow-audit.jsonl (local)
 ├── api/                   # Vercel serverless entrypoint
-├── evidence.json          # latest demo run evidence
-├── .env.example
+├── .github/               # CI workflow, dependabot, PR template
+├── evidence-<chain>.json  # latest demo run evidence (local)
+├── Makefile               # test/build/verify targets
+├── SECURITY.md · CONTRIBUTING.md · .env.example
 └── README.md
 ```
 
