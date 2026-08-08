@@ -1,0 +1,61 @@
+{
+  "window": { "start": 0, "end": 23 },
+  "functionAllowlist": ["approve(address,uint256)", "deposit(uint256)"],
+  "tokens": [
+    { "symbol": "USDC", "address": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9", "decimals": 6 }
+  ],
+  "venues": [
+    {
+      "id": "mock-sky",
+      "name": "Mock Sky Savings",
+      "address": "0xcC153b1908F4aD09cf3a59fC2CC8BEF82Fd28e4e",
+      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
+      "enabled": true,
+      "maxDeposit": 5000,
+      "budget": 10000,
+      "budgetPeriodHours": 24,
+      "apyOverride": 5.12,
+      "defillamaProject": "sky",
+      "defillamaSymbol": "sUSDS"
+    },
+    {
+      "id": "mock-spark",
+      "name": "Mock Spark",
+      "address": "0x0000000000000000000000000000000000000000",
+      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
+      "enabled": true,
+      "maxDeposit": 5000,
+      "budget": 10000,
+      "budgetPeriodHours": 24,
+      "apyOverride": 4.87,
+      "defillamaProject": "spark",
+      "defillamaSymbol": "sUSDe"
+    },
+    {
+      "id": "mock-aave",
+      "name": "Mock Aave V3",
+      "address": "0x0000000000000000000000000000000000000000",
+      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
+      "enabled": true,
+      "maxDeposit": 5000,
+      "budget": 10000,
+      "budgetPeriodHours": 24,
+      "apyOverride": 3.94,
+      "defillamaProject": "aave",
+      "defillamaSymbol": "aUSDC"
+    },
+    {
+      "id": "unlisted-venue",
+      "name": "Not Allowlisted",
+      "address": "0x0000000000000000000000000000000000000000",
+      "tokenAddress": "0x032b4f813F0E21bAD8B6Bd497a8a6841B8a28dd9",
+      "enabled": false,
+      "maxDeposit": 0,
+      "budget": 0,
+      "budgetPeriodHours": 24,
+      "apyOverride": 0,
+      "defillamaProject": "",
+      "defillamaSymbol": ""
+    }
+  ]
+}
