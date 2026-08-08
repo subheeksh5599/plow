@@ -188,6 +188,14 @@ def test_gate_window_enforced():
         check(f"window hour {hour} deny={expect_deny}", (v["decision"] == "DENY") == expect_deny, f"h={hour} -> {v['decision']} {v.get('reason')}")
 
 
+def test_verify_unknown_venue():
+    async def run():
+        return await plow.verify_position("0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf", "ghost-venue")
+
+    r = asyncio.run(run())
+    check("unknown venue verify fails gracefully", r.get("ok") is False and r.get("error"), str(r))
+
+
 def test_scheduler_picks_addressable_venue():
     """run_once must skip rank-only venues and pick the top addressable one."""
     import types
@@ -243,5 +251,6 @@ if __name__ == "__main__":
     test_escalation_lifecycle()
     test_gate_window_enforced()
     test_scheduler_picks_addressable_venue()
+    test_verify_unknown_venue()
     print(f"\n{len(FAILURES)} failures" if FAILURES else "\nAll tests passed")
     sys.exit(1 if FAILURES else 0)
