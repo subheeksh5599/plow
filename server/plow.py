@@ -114,10 +114,11 @@ def gate_deposit(policy: dict, venue_id: str, amount: float, simulate: Optional[
     spent = audit_spent(venue_id, period_h)
     check("budget", spent + amount <= budget, f"spent {spent:.2f} + {amount:.2f} <= budget {budget:.2f}")
 
-    # active window (UTC hours)
+    # active window (UTC hours) — supports wraparound ranges like 23→5
     win = policy.get("window", {"start": 0, "end": 23})
     hour = _utc_hour()
-    in_window = int(win["start"]) <= hour <= int(win["end"])
+    w_start, w_end = int(win["start"]), int(win["end"])
+    in_window = (w_start <= hour <= w_end) if w_start <= w_end else (hour >= w_start or hour <= w_end)
     check("window", in_window, f"utc {hour} in window {win}")
 
     # function allowlist
