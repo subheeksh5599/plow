@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Plow — Put idle capital to work, autonomously",
+  title: "Plow — policy-gated yield execution on KeeperHub",
   description:
-    "Plow is the agent that executes the write path: scan idle stablecoins, rank venues by live APY, deposit through KeeperHub — policy-gated, sponsored, verified.",
+    "Plow executes the write path: scan wallet positions, rank allowlisted venues by live DefiLlama APY, deposit through KeeperHub — policy-gated, sponsored, verified onchain, audited.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

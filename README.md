@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/media/landing.png" alt="Plow — Put idle capital to work, autonomously" width="100%" />
+<img src="docs/media/landing.png" alt="Plow — policy-gated yield execution on KeeperHub" width="100%" />
 
 &nbsp;
 

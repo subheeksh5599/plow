@@ -1,22 +1,12 @@
 import HeroCanvas from "./HeroCanvas";
 import ClientFx from "./ClientFx";
 
-const logo = (
-  <span className="logo-mark">
-    <svg viewBox="0 0 16 16" fill="none">
-      <path d="M2 9.5 7.5 4l3 3L14 3.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M2 12.5h12" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
 export default function Page() {
   return (
     <>
       <nav>
         <div className="nav-inner">
           <a className="logo" href="#top">
-            {logo}
             Plow
           </a>
           <div className="nav-links">
@@ -27,11 +17,11 @@ export default function Page() {
             <a href="#roadmap">Roadmap</a>
           </div>
           <div className="nav-cta">
-            <a className="btn btn-ghost btn-sm" href="#gap">
-              Why now
+            <a className="btn btn-ghost btn-sm" href="https://github.com/subheeksh5599/plow" target="_blank" rel="noopener noreferrer">
+              Source
             </a>
-            <a className="btn btn-primary btn-sm" href="#how">
-              See the flow
+            <a className="btn btn-primary btn-sm" href="#demo">
+              Live demo
             </a>
           </div>
         </div>
@@ -45,18 +35,18 @@ export default function Page() {
         </div>
         <div className="container hero-inner">
           <h1 className="hero-title reveal">
-            Idle stablecoins shouldn&apos;t sit still.
+            Policy-gated deposits.
             <br />
-            <em>Plow moves them.</em>
+            <em>Sponsored. Verified. Audited.</em>
           </h1>
           <p className="hero-sub reveal">
-            An autonomous agent that scans your wallet, ranks yield venues by live APY, and deposits through
+            An autonomous agent that scans a wallet, ranks yield venues by live APY, and deposits through
             KeeperHub — policy-gated, gas-sponsored, and verified onchain. The last mile of the scan-to-automate
             funnel, executed.
           </p>
           <div className="hero-ctas reveal">
             <a className="btn btn-primary" href="#demo">
-              Watch it run
+              Live demo
             </a>
             <a className="btn btn-ghost" href="#how">
               How it works
@@ -112,8 +102,8 @@ export default function Page() {
                   <path d="M9 2v14M4 6l5-4 5 4M4 12l5 4 5-4" stroke="#533afd" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <div className="big-number tnum">~4%</div>
-              <h3>Idle, while venues pay</h3>
+              <div className="big-number tnum">0%</div>
+              <h3>Idle balances earn nothing</h3>
               <p>
                 Stablecoins parked in wallets earn nothing while the same assets in a supply venue earn live APY. The
                 distance between them is one transaction.
@@ -173,7 +163,7 @@ export default function Page() {
         <div className="container">
           <div className="section-head reveal">
             <div className="kicker">Live flow</div>
-            <h2>What a run looks like</h2>
+            <h2>Recorded run (Sepolia)</h2>
             <p className="lead">The agent in the terminal — no dashboard, no click-through. MCP tools, one intent, executed.</p>
           </div>
           <div className="terminal reveal">
@@ -224,8 +214,8 @@ export default function Page() {
             <div className="kicker" style={{ color: "#b9b9f9" }}>
               Built on KeeperHub
             </div>
-            <h2>Execution with guarantees, not vibes</h2>
-            <p className="lead">Every surface KeeperHub ships is used — and the audit trail is the product.</p>
+            <h2>Execution guarantees</h2>
+            <p className="lead">All execution goes through KeeperHub&apos;s direct-execution API; every decision is recorded in the audit trail.</p>
           </div>
           <div className="stack-grid">
             <div className="stack-item reveal">
@@ -245,17 +235,17 @@ export default function Page() {
             </div>
             <div className="stack-item reveal">
               <div className="mono">MCP + CLI</div>
-              <h4>Any framework drops in</h4>
+              <h4>Agent-callable tools</h4>
               <p>scan_positions, rank_venues, execute_deposit, verify_position — MCP-shaped tools any agent can call, BYOK per org.</p>
             </div>
             <div className="stack-item reveal reveal-d1">
               <div className="mono">idempotency</div>
-              <h4>Never double-deposit</h4>
+              <h4>Idempotent retries</h4>
               <p>Stable semantic-intent keys, rotation on retry, chain-verify before re-firing — the sponsor&apos;s own reliability research applied.</p>
             </div>
             <div className="stack-item reveal reveal-d2">
               <div className="mono">defillama</div>
-              <h4>Live, degrade-safe APY</h4>
+              <h4>Degrade-safe APY feed</h4>
               <p>Rankings come from live yield data with a cache and graceful degradation — a stale feed never produces a stale deposit.</p>
             </div>
           </div>
@@ -266,8 +256,8 @@ export default function Page() {
         <div className="container">
           <div className="section-head reveal">
             <div className="kicker">Evidence</div>
-            <h2>Transactions, not mockups</h2>
-            <p className="lead">Every run lands real sponsored transactions on Sepolia, verified onchain. This table fills with the run&apos;s own hashes.</p>
+            <h2>Onchain evidence</h2>
+            <p className="lead">Every run lands real sponsored transactions on Sepolia, each verified status 1 on the explorer.</p>
           </div>
           <div className="reveal" style={{ overflowX: "auto" }}>
             <table className="evidence-table">
@@ -331,7 +321,7 @@ export default function Page() {
               </tbody>
             </table>
           </div>
-          <p className="evidence-note reveal">Hashes land here after the live demo runs — every one Blockscout status 1, sponsored flag captured.</p>
+          <p className="evidence-note reveal">All hashes verified status 1 on Blockscout; the sponsored flag is captured per run.</p>
         </div>
       </section>
 
@@ -339,7 +329,7 @@ export default function Page() {
         <div className="container">
           <div className="section-head reveal">
             <div className="kicker">Roadmap</div>
-            <h2>From proof to pipeline</h2>
+            <h2>Status &amp; roadmap</h2>
           </div>
           <ul className="roadmap reveal">
             <li>
@@ -399,10 +389,7 @@ export default function Page() {
         <div className="container">
           <div className="foot-grid">
             <div className="foot-brand">
-              <div className="logo">
-                {logo}
-                Plow
-              </div>
+              <div className="logo">Plow</div>
               <p>
                 The write path for agent-executed yield. Built on KeeperHub&apos;s execution layer — every deposit
                 sponsored, gated, and verified.
