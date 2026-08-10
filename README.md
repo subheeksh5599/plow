@@ -7,7 +7,7 @@
 [![Live demo](https://img.shields.io/badge/●_live-plow-beta.vercel.app-533afd)](https://plow-beta.vercel.app)
 [![Aave V3 Pool (Sepolia)](https://img.shields.io/badge/📜_Aave_V3_Pool_Sepolia-14151a)](https://sepolia.etherscan.io/address/0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951)
 [![License: MIT](https://img.shields.io/badge/license-MIT-533afd.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-22%20passing-3fb950)](https://github.com/subheeksh5599/plow/actions)
+[![Tests](https://img.shields.io/badge/tests-21%20passing-3fb950)](https://github.com/subheeksh5599/plow/actions)
 [![CI](https://img.shields.io/github/actions/workflow/status/subheeksh5599/plow/ci.yml?branch=main&label=CI)](https://github.com/subheeksh5599/plow/actions)
 ![Stack](https://img.shields.io/badge/Python%20·%20Next.js-1f1f23)
 ![KeeperHub](https://img.shields.io/badge/KeeperHub-execution%20layer-533afd)
@@ -296,23 +296,24 @@ WETH rate from DefiLlama.
 
 ## Tests
 
-**22 tests passing**, all green:
+**21 tests passing** (38 checks), all green:
 
 ```
 === Python (server) ===
-All tests passed — 22/22
+All tests passed — 21/21
 gate: unlisted DENY, disabled DENY, rank-only (no executable address) DENY,
 zero-amount DENY, cap DENY, simulate-revert DENY, fail-closed DENY, in-policy
 ALLOW, over-budget ESCALATE, active-window wraparound, intent-key determinism,
 BYOK precedence, calldata selectors, rank excludes unmatched venues, rank fails
 loudly on feed failure, rank live-APY match, escalation lifecycle (list/reject),
-scheduler addressable-venue selection, verify unknown venue, scan empty
+scheduler addressable-venue selection, verify unknown venue, scan empty,
+status poll retries empty hash (B8)
 ```
 
 Run them:
 
 ```bash
-.venv/bin/python server/test_plow.py   # 22 tests
+.venv/bin/python server/test_plow.py   # 21 tests
 ```
 
 ---

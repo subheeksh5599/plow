@@ -257,6 +257,38 @@ def test_scheduler_picks_addressable_venue():
     check("scheduler picked addressable venue", calls["execute"] == ("aave-v3-weth", 1000.0), str(calls["execute"]))
 
 
+def test_status_poll_retries_empty_hash():
+    """B8: poll until a transactionHash appears; stop early on terminal failure."""
+
+    async def make_fake(seq):
+        i = {"n": 0}
+
+        async def fn(eid):
+            r = seq[min(i["n"], len(seq) - 1)]
+            i["n"] += 1
+            return r
+
+        return fn
+
+    async def run():
+        out = {}
+        fn = await make_fake([{"status": "completed", "transactionHash": "0xabc"}])
+        out["first"] = await plow.kh_execution_status_poll("e1", attempts=4, delay=0, status_fn=fn)
+        fn2 = await make_fake([{"status": "pending"}, {"status": "completed", "transactionHash": "0xdef"}])
+        out["retry"] = await plow.kh_execution_status_poll("e2", attempts=4, delay=0, status_fn=fn2)
+        fn3 = await make_fake([{"status": "failed", "error": "boom"}])
+        out["failed"] = await plow.kh_execution_status_poll("e3", attempts=4, delay=0, status_fn=fn3)
+        fn4 = await make_fake([{"status": "pending"}])
+        out["budget"] = await plow.kh_execution_status_poll("e4", attempts=3, delay=0, status_fn=fn4)
+        return out
+
+    r = asyncio.run(run())
+    check("b8 returns hash on first read", r["first"].get("transactionHash") == "0xabc")
+    check("b8 retries empty hash and recovers", r["retry"].get("transactionHash") == "0xdef")
+    check("b8 stops early on terminal failure", r["failed"].get("status") == "failed")
+    check("b8 returns last result after budget", r["budget"].get("status") == "pending")
+
+
 if __name__ == "__main__":
     print("Plow server tests")
     test_stable_intent_key_deterministic()
@@ -278,5 +310,6 @@ if __name__ == "__main__":
     test_gate_window_enforced()
     test_scheduler_picks_addressable_venue()
     test_verify_unknown_venue()
+    test_status_poll_retries_empty_hash()
     print(f"\n{len(FAILURES)} failures" if FAILURES else "\nAll tests passed")
     sys.exit(1 if FAILURES else 0)

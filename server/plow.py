@@ -299,6 +299,28 @@ async def kh_execution_status(execution_id: str) -> dict:
     return await kh_request("GET", f"/api/execute/{execution_id}/status")
 
 
+async def kh_execution_status_poll(execution_id: str, attempts: int = 4, delay: float = 1.5,
+                                   status_fn=None) -> dict:
+    """Poll an execution's status until a transactionHash appears (B8).
+
+    Direct-execution status can lag the write; a single read may return no
+    hash yet. Terminal failure states stop early. `status_fn` is injectable
+    for tests — defaults to the live KeeperHub status read.
+    """
+    fn = status_fn or kh_execution_status
+    last: dict = {}
+    for i in range(attempts):
+        last = await fn(execution_id)
+        if last.get("transactionHash"):
+            return last
+        state = str(last.get("status", "")).lower()
+        if state in ("failed", "error", "reverted", "cancelled", "canceled"):
+            return last
+        if i < attempts - 1:
+            await asyncio.sleep(delay)
+    return last
+
+
 async def kh_wallet_address() -> str:
     data = await kh_request("GET", "/api/integrations")
     for integ in data if isinstance(data, list) else data.get("integrations", data.get("data", [])):
@@ -498,7 +520,7 @@ async def execute_deposit(
             exec_approve = await kh_contract_call(token, "approve", [venue["address"], amount_units], ABI_ERC20)
             approve_id = exec_approve.get("executionId")
             if approve_id:
-                approve_status = await kh_execution_status(approve_id)
+                approve_status = await kh_execution_status_poll(approve_id)
                 approve_hash = approve_status.get("transactionHash")
                 txs.append(approve_id)
 
@@ -530,7 +552,7 @@ async def execute_deposit(
     exec_dep = await kh_contract_call(venue["address"], "supply", [token, amount_units, address, 0], ABI_AAVE_POOL)
     dep_id = exec_dep.get("executionId")
     txs.append(dep_id)
-    dep_status = await kh_execution_status(dep_id)
+    dep_status = await kh_execution_status_poll(dep_id) if dep_id else {}
     tx_hash = dep_status.get("transactionHash")
     sponsored = dep_status.get("sponsored")
 
@@ -596,7 +618,7 @@ async def execute_withdraw(
 
     exec_w = await kh_contract_call(venue["address"], "withdraw", [token, amount_units, address], ABI_AAVE_POOL)
     w_id = exec_w.get("executionId")
-    w_status = await kh_execution_status(w_id)
+    w_status = await kh_execution_status_poll(w_id) if w_id else {}
     return {
         "ok": True,
         "decision": "ALLOW",
