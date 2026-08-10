@@ -164,7 +164,7 @@ export default function Page() {
           <div className="section-head reveal">
             <div className="kicker">Live flow</div>
             <h2>Recorded run (Sepolia)</h2>
-            <p className="lead">The agent in the terminal — no dashboard, no click-through. MCP tools, one intent, executed.</p>
+            <p className="lead">A complete deposit run from the CLI — scan, rank, gate, execute, verify.</p>
           </div>
           <div className="terminal reveal">
             <div className="term-bar">
@@ -203,7 +203,7 @@ export default function Page() {
             </div>
           </div>
           <p className="evidence-note reveal" style={{ textAlign: "center" }}>
-            Illustrative run — same shape as the live demo, with the run&apos;s own hashes in the evidence table below.
+            Replay of the recorded run — the hashes below are verified onchain.
           </p>
         </div>
       </section>
@@ -333,51 +333,37 @@ export default function Page() {
           </div>
           <ul className="roadmap reveal">
             <li>
-              <div className="phase">P0–P3</div>
+              <div className="phase">Live</div>
               <div className="what">
-                <h4>Agent core</h4>
-                <p>Policy gate, venue contracts on Sepolia, scan + rank engine, gated execution with verification.</p>
+                <h4>Execution engine</h4>
+                <p>Policy gate, simulate-first deposits, exact approvals, idempotent retries — operating on Sepolia.</p>
               </div>
             </li>
             <li>
-              <div className="phase">P4</div>
+              <div className="phase">Live</div>
               <div className="what">
-                <h4>MCP + CLI surface</h4>
-                <p>Agent-callable tools and a terminal demo path — no dashboard required.</p>
+                <h4>Agent surface</h4>
+                <p>scan_positions, rank_venues, execute_deposit, verify_position — MCP-shaped tools, BYOK per org.</p>
               </div>
             </li>
             <li>
-              <div className="phase">P5–P6</div>
+              <div className="phase">Live</div>
               <div className="what">
-                <h4>Evidence + README</h4>
-                <p>Sponsored demo runs, graph generation from run data, nendo-format README.</p>
+                <h4>Automation</h4>
+                <p>Recurring placement loop (plow_scheduler) and human-in-the-loop escalation (list/resolve_escalation).</p>
               </div>
             </li>
             <li>
-              <div className="phase">P7</div>
-              <div className="what">
-                <h4>Submission</h4>
-                <p>Demo video, BUIDL, pitch — every artifact from real runs.</p>
-              </div>
-            </li>
-            <li>
-              <div className="phase">Engine</div>
+              <div className="phase">In progress</div>
               <div className="what">
                 <h4>Multi-chain</h4>
-                <p>Chain-abstracted execution (Base Sepolia config-ready); Base demo deposit pending testnet bridge relay.</p>
+                <p>Chain-abstracted execution; Base Sepolia config-ready, demo deposit pending testnet bridge relay.</p>
               </div>
             </li>
             <li>
-              <div className="phase">Done</div>
+              <div className="phase">Planned</div>
               <div className="what">
-                <h4>Schedule + escalation</h4>
-                <p>Recurring placement loop (plow_scheduler) and human-in-the-loop resolve (list/resolve_escalation).</p>
-              </div>
-            </li>
-            <li>
-              <div className="phase">Next</div>
-              <div className="what">
-                <h4>Mainnet path</h4>
+                <h4>Mainnet</h4>
                 <p>Real venue adapters (Sky sUSDS, Ethena sUSDe, Aave V3) config-gated; audit before any real funds.</p>
               </div>
             </li>
