@@ -14,7 +14,6 @@ export default function Page() {
             <a href="#how">How it works</a>
             <a href="#demo">Live flow</a>
             <a href="#evidence">Evidence</a>
-            <a href="#roadmap">Roadmap</a>
           </div>
           <div className="nav-cta">
             <a className="btn btn-ghost btn-sm" href="https://github.com/subheeksh5599/plow" target="_blank" rel="noopener noreferrer">
@@ -322,52 +321,6 @@ export default function Page() {
             </table>
           </div>
           <p className="evidence-note reveal">All hashes verified status 1 on Blockscout; the sponsored flag is captured per run.</p>
-        </div>
-      </section>
-
-      <section id="roadmap" style={{ background: "#fafbfe" }}>
-        <div className="container">
-          <div className="section-head reveal">
-            <div className="kicker">Roadmap</div>
-            <h2>Status &amp; roadmap</h2>
-          </div>
-          <ul className="roadmap reveal">
-            <li>
-              <div className="phase">Live</div>
-              <div className="what">
-                <h4>Execution engine</h4>
-                <p>Policy gate, simulate-first deposits, exact approvals, idempotent retries — operating on Sepolia.</p>
-              </div>
-            </li>
-            <li>
-              <div className="phase">Live</div>
-              <div className="what">
-                <h4>Agent surface</h4>
-                <p>scan_positions, rank_venues, execute_deposit, verify_position — MCP-shaped tools, BYOK per org.</p>
-              </div>
-            </li>
-            <li>
-              <div className="phase">Live</div>
-              <div className="what">
-                <h4>Automation</h4>
-                <p>Recurring placement loop (plow_scheduler) and human-in-the-loop escalation (list/resolve_escalation).</p>
-              </div>
-            </li>
-            <li>
-              <div className="phase">In progress</div>
-              <div className="what">
-                <h4>Multi-chain</h4>
-                <p>Chain-abstracted execution; Base Sepolia config-ready, demo deposit pending testnet bridge relay.</p>
-              </div>
-            </li>
-            <li>
-              <div className="phase">Planned</div>
-              <div className="what">
-                <h4>Mainnet</h4>
-                <p>Real venue adapters (Sky sUSDS, Ethena sUSDe, Aave V3) config-gated; audit before any real funds.</p>
-              </div>
-            </li>
-          </ul>
         </div>
       </section>
 
