@@ -332,6 +332,7 @@ async def kh_wallet_address() -> str:
 # ---------------------------------------------------------------- RPC reads
 BALANCE_OF_SELECTOR = "0x70a08231"
 ALLOWANCE_SELECTOR = "0xdd62ed3e"
+SYMBOL_SELECTOR = "0x95d89b41"
 
 
 def _erc20_balance_calldata(token: str, who: str) -> str:
@@ -364,6 +365,31 @@ async def rpc_read_erc20(token: str, who: str) -> int:
 
 async def rpc_read_erc20_allowance(token: str, owner: str, spender: str) -> int:
     return await _rpc_call(_erc20_allowance_calldata(token, owner, spender), token)
+
+
+async def rpc_read_erc20_symbol(token: str) -> str:
+    """Read the ERC20 symbol() onchain. Returns "" on any failure."""
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_call",
+        "params": [{"to": token.lower(), "data": SYMBOL_SELECTOR}, "latest"],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(RPC, json=payload)
+            raw = resp.json().get("result") or "0x"
+        raw = raw[2:] if raw.startswith("0x") else raw
+        if len(raw) < 128:
+            return ""
+        # ABI string: offset(32) length(32) padded bytes
+        length = int(raw[64:128], 16)
+        if length == 0 or len(raw) < 128 + length * 2:
+            return ""
+        data = bytes.fromhex(raw[128:128 + length * 2])
+        return data.decode("utf-8", "replace").strip("\x00")
+    except Exception:
+        return ""
 
 
 async def rpc_native_balance(who: str) -> int:
@@ -642,7 +668,15 @@ async def verify_position(address: str, venue_id: str) -> dict:
         shares = await rpc_read_erc20(target, address)
     except Exception as e:
         return {"ok": False, "error": str(e)}
-    return {"ok": shares > 0, "venue_id": venue_id, "shares": shares, "shares_formatted": round(shares / 1e18, 6), "source": f"eth_call balanceOf onchain ({target[:10]}…)"}
+    symbol = venue.get("aTokenSymbol", "") or await rpc_read_erc20_symbol(target)
+    return {
+        "ok": shares > 0,
+        "venue_id": venue_id,
+        "shares": shares,
+        "shares_formatted": round(shares / 1e18, 6),
+        "symbol": symbol,
+        "source": f"eth_call balanceOf onchain ({target[:10]}…)",
+    }
 
 
 # ---------------------------------------------------------------- MCP tools

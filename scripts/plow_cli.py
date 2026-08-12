@@ -95,7 +95,9 @@ async def _deposit(args, plow):
     print(f"· approve exact {args.amount:,.2f} (no max-uint)   → sponsored {_short(tx) if tx else '…'}")
     print(f"· deposit {args.amount:,.2f} → {args.venue:<18} → sponsored {_short(tx)}")
     v = result.get("verified") or {}
-    print(f"✓ verify balanceOf = {v.get('shares_formatted', 0):,.2f} sUSDS · onchain read")
+    sym = v.get("symbol") or "tokens"
+    amt = f"{v.get('shares_formatted', 0):,.6f}".rstrip("0").rstrip(".")
+    print(f"✓ verify balanceOf = {amt} {sym} · onchain read")
     print("✓ audit  {decision:ALLOW, gas:sponsored, outcome:landed, ts:…}")
 
 
@@ -106,7 +108,9 @@ async def _verify(args, plow):
         _out_json(result)
         return
     if result.get("ok"):
-        print(f"✓ verify {_short(addr)} in {args.venue}: {result.get('shares_formatted', 0):,.2f} sUSDS · {result.get('source')}")
+        sym = result.get("symbol") or "tokens"
+        amt = f"{result.get('shares_formatted', 0):,.6f}".rstrip("0").rstrip(".")
+        print(f"✓ verify {_short(addr)} in {args.venue}: {amt} {sym} · {result.get('source')}")
     else:
         print(f"✗ verify failed: {result.get('error','')}")
 

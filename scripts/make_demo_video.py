@@ -118,7 +118,7 @@ def evidence_frame():
     img, draw = frame_base()
     rows = [
         ("Run", "Action", "Transaction", "Status", DIM),
-        ("01", "Scan + rank — live Aave V3 WETH APY", "onchain reads", "1.43% live", GREEN),
+        ("01", "Scan + rank — live Aave V3 WETH APY", "onchain reads", "1.45% live", GREEN),
         ("02", "Supply 0.005 WETH → Aave V3", "0x06d9288e…26f", "sponsored", GREEN),
         ("03", "Withdraw 0.002 WETH from Aave V3", "0x41d8900d…88f", "sponsored", GREEN),
         ("04", "Supply to unlisted venue", "zero txs", "blocked", PINK),
@@ -198,23 +198,24 @@ S1_QUOTE = [
     ('"Read-only: Yes. No deposit/approve/write node is produced.', 40, WHITE),
     ("The auto-deposit write path is the deferred Phase 999.1", 40, MAGENTA_LIGHT),
     ('backlog item and is out of scope here."', 40, MAGENTA_LIGHT),
-    ("KeeperHub — specs/scan-apy-yield-suggestions.md", 24, DIM),
+    ("KeeperHub — Scan-to-Automate spec (v1.13)", 24, DIM),
 ]
 S2 = [("PLOW", 0), ("The write path for agent-executed yield", 0), ("policy-gated · sponsored · verified", 0)]
 
 S3_LINES = [
-    ([("$ plow scan ", DIM), ("0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf", YELLOW), (" --chain sepolia", DIM)], 0.0),
+    ([("$ plow --chain sepolia scan ", DIM), ("--address 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf", YELLOW)], 0.0),
     ([("✓ ", GREEN), ("read idle ", PURPLE), ("WETH", WHITE), ("      0.01", GREEN), ("  @ ", WHITE), ("0xc558dbdd85…9a3c", YELLOW)], 0.0),
     ([("→ ", PURPLE), ("1 position(s) on sepolia", WHITE)], 0.0),
     ([("→ ", PURPLE), ("rank venues (defillama yields, live)", WHITE)], 0.0),
-    ([("  1. ", YELLOW), ("Aave V3 (WETH supply)", WHITE), ("  1.43%", GREEN), ("  apy", DIM)], 0.0),
+    ([("  1. ", YELLOW), ("Aave V3 (WETH supply)", WHITE), ("  1.45%", GREEN), ("  apy", DIM)], 0.0),
 ]
 
 S4_LINES = [
     ([("$ plow deposit ", DIM), ("--venue aave-v3-weth --amount 0.005", YELLOW)], 0.0),
     ([("· ", PURPLE), ("gate  venue allowlisted ", WHITE), ("✓", GREEN), ("  simulate: wouldRevert=false ", WHITE), ("✓", GREEN)], 0.0),
-    ([("· ", PURPLE), ("supply 0.005 → Aave V3", WHITE), ("            → ", WHITE), ("sponsored ", GREEN), ("0x06d9288e…26f", YELLOW)], 2.0),
-    ([("· ", PURPLE), ("withdraw 0.002", WHITE), ("                    → ", WHITE), ("sponsored ", GREEN), ("0x41d8900d…88f", YELLOW)], 2.0),
+    ([("· ", PURPLE), ("approve exact 0.005 (no max-uint)", WHITE), ("  → ", WHITE), ("sponsored ", GREEN)], 0.0),
+    ([("· ", PURPLE), ("deposit 0.005 → aave-v3-weth", WHITE), ("      → ", WHITE), ("sponsored ", GREEN), ("0x06d9288e…26f", YELLOW)], 2.0),
+    ([("· ", PURPLE), ("withdraw 0.002 (execute_withdraw)", WHITE), (" → ", WHITE), ("sponsored ", GREEN), ("0x41d8900d…88f", YELLOW)], 2.0),
     ([("✓ ", GREEN), ("verify balanceOf = ", PURPLE), ("0.003", GREEN), (" aWETH · onchain read", WHITE)], 0.0),
     ([("✓ ", GREEN), ("audit  ", PURPLE), ("{decision:ALLOW, gas:sponsored, outcome:landed, ts:…}", WHITE)], 0.0),
 ]
@@ -259,7 +260,7 @@ def main():
 
     d = scene_duration(os.path.join(DEMO, "s06.mp3"), 24.0, pad=2.0)
     img = evidence_frame()
-    caption(ImageDraw.Draw(img), "Six runs. Four sponsored. One denial. Every hash verifies.")
+    caption(ImageDraw.Draw(img), "Seven runs. Five sponsored. One denial. Every hash verifies.")
     scenes.append(("s6", static_frames(img), d, "s06"))
 
     d = scene_duration(os.path.join(DEMO, "s07.mp3"), 12.0, pad=2.0)

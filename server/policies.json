@@ -1,8 +1,19 @@
 {
-  "window": { "start": 0, "end": 23 },
-  "functionAllowlist": ["approve(address,uint256)", "supply(address,uint256,address,uint16)", "withdraw(address,uint256,address)"],
+  "window": {
+    "start": 0,
+    "end": 23
+  },
+  "functionAllowlist": [
+    "approve(address,uint256)",
+    "supply(address,uint256,address,uint16)",
+    "withdraw(address,uint256,address)"
+  ],
   "tokens": [
-    { "symbol": "WETH", "address": "0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c", "decimals": 18 }
+    {
+      "symbol": "WETH",
+      "address": "0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c",
+      "decimals": 18
+    }
   ],
   "venues": [
     {
@@ -17,7 +28,8 @@
       "budget": 0.05,
       "budgetPeriodHours": 24,
       "defillamaProject": "aave-v3",
-      "defillamaSymbol": "WETH"
+      "defillamaSymbol": "WETH",
+      "aTokenSymbol": "aWETH"
     },
     {
       "id": "unlisted-venue",
