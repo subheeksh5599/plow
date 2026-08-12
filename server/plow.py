@@ -767,6 +767,12 @@ TOOLS = [
     },
 ]
 
+# MCP spec field name: the SDK validates `inputSchema` on every tool.
+for _t in TOOLS:
+    _t.setdefault("inputSchema", _t["parameters"])
+
+MCP_SERVER_INFO = {"name": "plow", "version": "0.1.0"}
+
 
 async def mcp_call(name: str, args: dict) -> dict:
     if name == "scan_positions":
@@ -818,17 +824,47 @@ async def app(scope, receive, send):
         except Exception:
             await _respond(send, 400, {"error": "invalid_json"})
             return
+        req_id = req.get("id")
         try:
-            if req.get("method") == "tools/list":
+            method_name = req.get("method", "")
+            if method_name == "initialize":
+                # MCP handshake: negotiate the protocol version the client asked
+                # for (any supported) and advertise tools.
+                requested = (req.get("params") or {}).get("protocolVersion", "")
+                versions = ["2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"]
+                version = requested if requested in versions else "2025-03-26"
+                result = {
+                    "protocolVersion": version,
+                    "capabilities": {"tools": {"listChanged": False}},
+                    "serverInfo": MCP_SERVER_INFO,
+                    "instructions": (
+                        "Plow: the policy-gated write path for agent-executed yield. "
+                        "scan_positions reads idle balances onchain, rank_venues ranks "
+                        "allowlisted venues by live DefiLlama APY, execute_deposit/"
+                        "execute_withdraw run the gated sponsored flow, verify_position "
+                        "reads the aToken balance back onchain."
+                    ),
+                }
+            elif method_name == "notifications/initialized":
+                # Notification — ack with an empty result.
+                result = {}
+            elif method_name == "ping":
+                result = {}
+            elif method_name == "tools/list":
                 result = {"tools": TOOLS}
-            elif req.get("method") == "tools/call":
+            elif method_name == "tools/call":
                 params = req.get("params", {})
-                result = await mcp_call(params.get("name", ""), params.get("arguments", {}))
+                call_result = await mcp_call(params.get("name", ""), params.get("arguments", {}))
+                # MCP spec: tool results are content blocks.
+                result = {
+                    "content": [{"type": "text", "text": json.dumps(call_result, default=str)}],
+                    "isError": False,
+                }
             else:
                 result = {"error": "unknown_method"}
-            await _respond(send, 200, {"jsonrpc": "2.0", "id": req.get("id"), "result": result})
+            await _respond(send, 200, {"jsonrpc": "2.0", "id": req_id, "result": result})
         except Exception as e:
-            await _respond(send, 200, {"jsonrpc": "2.0", "id": req.get("id"), "error": {"message": str(e), "type": type(e).__name__}})
+            await _respond(send, 200, {"jsonrpc": "2.0", "id": req_id, "error": {"message": str(e), "type": type(e).__name__}})
         return
 
     await _respond(send, 404, {"error": "not_found"}, headers=origin)

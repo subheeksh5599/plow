@@ -50,7 +50,9 @@ def main():
         print(f"✓ tools/list — {len(names)} tools: {', '.join(names)}")
 
         rank = rpc(client, args.url, key, "tools/call", {"name": "rank_venues", "arguments": {}})
-        ranked = rank["result"]["ranked"]
+        # MCP spec: tool results are content blocks — unwrap the JSON text.
+        blocks = rank["result"].get("content", [])
+        ranked = json.loads(blocks[0]["text"])["ranked"] if blocks else rank["result"].get("ranked", [])
         assert ranked, "rank_venues returned no venues"
         top = ranked[0]
         print(f"✓ rank_venues live — top: {top['name']} {top['apy']:.2f}% ({top['apySource'][:50]})")
