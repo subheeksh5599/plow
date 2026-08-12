@@ -61,7 +61,7 @@ Plow is a CLI. One address in, a live Aave position out — every step executed
 through KeeperHub and logged:
 
 ```bash
-$ plow scan 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf --chain sepolia
+$ plow --chain sepolia scan --address 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf
 ✓ read idle WETH      0.01  @ 0xc558dbdd85…9a3c
 → 1 position(s) on sepolia
 

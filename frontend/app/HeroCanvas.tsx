@@ -14,7 +14,7 @@ export default function HeroCanvas() {
     const SRC = { x: 110, y: 170 };
     const VAULT = { x: 0, y: 0, w: 210, h: 96 };
     const BEST = { x: 0, y: 0, w: 210, h: 96 };
-    const APY_TARGET = 1.43;
+    const APY_TARGET = 1.45;
     const TX_TARGET = 4;
     const MAX_PARTS = 40;
 
@@ -203,7 +203,7 @@ export default function HeroCanvas() {
       </div>
       <div className="canvas-wrap">
         <canvas id="flow" ref={canvasRef}></canvas>
-        <div className="canvas-caption">plow scan 0x1776…4Bf &nbsp;·&nbsp; 2 venues ranked &nbsp;·&nbsp; 1 deposit sponsored</div>
+        <div className="canvas-caption">plow scan 0x1776…4Bf &nbsp;·&nbsp; 1 venue ranked &nbsp;·&nbsp; 1 deposit sponsored</div>
       </div>
     </div>
   );

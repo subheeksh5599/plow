@@ -173,7 +173,7 @@ export default function Page() {
               <span className="term-title">plow — scan → rank → gate → deposit</span>
             </div>
             <div className="term-body">
-              <span className="dim">$</span> plow scan 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf --chain sepolia
+              <span className="dim">$</span> plow --chain sepolia scan --address 0x1776D4D751d97c85845bF54e6CE364CEc62D4bBf
               {"\n"}
               <span className="dim">✓</span> <span className="purple">read</span> idle WETH&nbsp;&nbsp; <span className="green">0.01</span>{" "}
               @ 0xc558dbdd85…9a3c
@@ -181,16 +181,19 @@ export default function Page() {
               <span className="dim">→</span> <span className="purple">rank</span> venues (defillama yields, live)
               {"\n"}
               &nbsp;&nbsp;<span className="yellow">1.</span> Aave V3 (WETH supply)&nbsp;&nbsp;{" "}
-              <span className="green">1.43%</span> apy
+              <span className="green">1.45%</span> apy
               {"\n"}
               <span className="dim">$</span> plow deposit --venue aave-v3-weth --amount 0.005
               {"\n"}
               <span className="dim">·</span> <span className="purple">gate</span>&nbsp; venue allowlisted ✓&nbsp; simulate: wouldRevert=false ✓
               {"\n"}
-              <span className="dim">·</span> <span className="purple">supply</span> 0.005 → Aave V3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
+              <span className="dim">·</span> <span className="purple">approve</span> exact 0.005 (no max-uint)&nbsp; →{" "}
+              <span className="green">sponsored</span>
+              {"\n"}
+              <span className="dim">·</span> <span className="purple">deposit</span> 0.005 → aave-v3-weth&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
               <span className="green">sponsored</span> 0x06d9288e…26f
               {"\n"}
-              <span className="dim">·</span> <span className="purple">withdraw</span> 0.002&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→{" "}
+              <span className="dim">·</span> <span className="purple">withdraw</span> 0.002 (execute_withdraw)&nbsp; →{" "}
               <span className="green">sponsored</span> 0x41d8900d…88f
               {"\n"}
               <span className="dim">✓</span> <span className="purple">verify</span> balanceOf = <span className="green">0.003</span> aWETH{" "}
@@ -274,7 +277,7 @@ export default function Page() {
                   <td>Scan + rank — live Aave V3 WETH APY</td>
                   <td className="mono">onchain reads</td>
                   <td>
-                    <span className="badge">1.43% live</span>
+                    <span className="badge">1.45% live</span>
                   </td>
                 </tr>
                 <tr>

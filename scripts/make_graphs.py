@@ -70,8 +70,23 @@ def graph_apy_ranking(evidence_path: str):
 
 
 def graph_vault_growth(evidence_path: str):
-    """2.png — sUSDS balance growth across the ALLOW deposits."""
+    """2.png — vault balance growth across the ALLOW deposits (real symbol)."""
     ev = load_evidence(evidence_path)
+    # symbol: verify result > venue id > token default
+    symbol = "tokens"
+    for r in ev["runs"]:
+        v = r.get("result") or {}
+        if v.get("symbol"):
+            symbol = v["symbol"]
+            break
+    else:
+        for r in ev["runs"]:
+            act = r.get("action", "")
+            if act.startswith("deposit ALLOW"):
+                venue = str(r.get("venue_id") or r.get("action", ""))
+                if "weth" in venue.lower():
+                    symbol = "aWETH"
+                break
     points = [(0, 0)]
     for r in ev["runs"]:
         if r.get("action", "").startswith("deposit ALLOW"):
@@ -84,13 +99,17 @@ def graph_vault_growth(evidence_path: str):
                 points[-1] = (points[-1][0], v["shares_formatted"])
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
+    if max(ys) < 1:
+        fmt = lambda y: f"{y:.4f}".rstrip("0").rstrip(".")
+    else:
+        fmt = lambda y: f"{y:,.0f}"
     fig, ax = plt.subplots(figsize=(7.6, 3.4), dpi=150)
     ax.plot(xs, ys, marker="o", color=PURPLE, linewidth=2.2, markersize=6, markerfacecolor="white", markeredgecolor=PURPLE, markeredgewidth=1.8)
     ax.fill_between(xs, ys, color=PURPLE_LIGHT, alpha=0.35)
     for x, y in zip(xs, ys):
-        ax.annotate(f"{y:,.0f}", (x, y), textcoords="offset points", xytext=(0, 9), ha="center", fontsize=9, color=NAVY, fontweight="bold")
+        ax.annotate(fmt(y), (x, y), textcoords="offset points", xytext=(0, 9), ha="center", fontsize=9, color=NAVY, fontweight="bold")
     ax.set_xlabel("Deposit run", fontsize=9)
-    ax.set_ylabel("sUSDS onchain", fontsize=9)
+    ax.set_ylabel(f"{symbol} onchain", fontsize=9)
     ax.set_xticks(xs)
     ax.set_xticklabels([f"run {x}" for x in xs], fontsize=9)
     ax.spines[["top", "right"]].set_visible(False)
