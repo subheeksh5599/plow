@@ -175,6 +175,8 @@ broadcast nothing.
 | 03 | **Withdraw 0.002 WETH from Aave V3** | [0x41d8900d…88f](https://sepolia.etherscan.io/tx/0x41d8900d160bf3f8accd56c4ea04751de7393bd2df2fff3d22c0f5951d9288f1) | ✅ **sponsored** |
 | 04 | Supply to unlisted venue | **zero txs** | ✅ blocked — the stop is the proof |
 | 05 | verify_position aWETH read-back | onchain read | ✅ 0.003 aWETH (0.005 − 0.002) |
+| 06 | **Supply 0.001 WETH → Aave V3** | [0x6849ae31…8353](https://sepolia.etherscan.io/tx/0x6849ae31c79f0df3ea26a6ff97617383f5a0c2dcde7a775bd70d2f11350c8353) | ✅ **sponsored** |
+| 07 | verify_position aWETH read-back | onchain read | ✅ 0.004 aWETH (0.005 − 0.002 + 0.001) |
 
 <img src="docs/media/2.png" alt="Position balance — verified onchain after each step" width="100%" />
 
@@ -282,7 +284,7 @@ WETH rate from DefiLlama.
 | Policy gate | ✅ Real | Allowlist, cap, budget, window, simulate, executable-address — ALLOW/DENY/ESCALATE |
 | Exact approvals | ✅ Real | PREFILL-07 compliant, never max-uint |
 | Sponsored execution | ✅ Real | Supply + withdraw sponsored on Sepolia (`"sponsored": true`) |
-| Onchain verification | ✅ Real | aWETH `balanceOf` read-back, arithmetic verified (0.005 − 0.002 = 0.003) |
+| Onchain verification | ✅ Real | aWETH `balanceOf` read-back, arithmetic verified (0.005 − 0.002 + 0.001 = 0.004) |
 | Zero-tx DENY | ✅ Real | Out-of-policy AND rank-only venues: nothing broadcast |
 | Audit trail | ✅ Real | Every decision JSONL-logged with checks + outcome |
 | Human-in-the-loop | ✅ Real | `list_escalations` / `resolve_escalation` (MCP + CLI) |

@@ -320,6 +320,26 @@ export default function Page() {
                     <span className="badge">verified</span>
                   </td>
                 </tr>
+                <tr>
+                  <td className="mono">06</td>
+                  <td>Supply 0.001 WETH → Aave V3</td>
+                  <td className="mono">
+                    <a href="https://sepolia.etherscan.io/tx/0x6849ae31c79f0df3ea26a6ff97617383f5a0c2dcde7a775bd70d2f11350c8353" target="_blank" rel="noreferrer">
+                      0x6849ae31…8353
+                    </a>
+                  </td>
+                  <td>
+                    <span className="badge">sponsored</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="mono">07</td>
+                  <td>verify_position aWETH read-back</td>
+                  <td className="mono">0.004 aWETH</td>
+                  <td>
+                    <span className="badge">verified</span>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
