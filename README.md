@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/media/landing.png" alt="Plow — policy-gated yield execution on KeeperHub" width="100%" />
+<img src="docs/media/landing.png" alt="Plow — policy-gated yield execution on KeeperHub" width="80%" />
 
 &nbsp;
 
