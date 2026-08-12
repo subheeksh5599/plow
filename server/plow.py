@@ -152,15 +152,38 @@ def gate_deposit(policy: dict, venue_id: str, amount: float, simulate: Optional[
 
 
 # ---------------------------------------------------------------- audit
+_AUDIT_DIR_FALLBACK = "/tmp/plow-audits"
+
+
 def _audit_path() -> str:
-    os.makedirs(AUDIT_DIR, exist_ok=True)
+    """Audit path, resilient to read-only deploy FS (Vercel serverless).
+
+    If the configured dir cannot be created/written (e.g. /var/task is
+    read-only), fall back to /tmp so gate decisions never crash the request.
+    """
+    for base in (AUDIT_DIR, _AUDIT_DIR_FALLBACK):
+        try:
+            os.makedirs(base, exist_ok=True)
+            probe = os.path.join(base, ".probe")
+            with open(probe, "a"):
+                pass
+            return os.path.join(base, "plow-audit.jsonl")
+        except OSError:
+            continue
+    # Last resort: still return the configured path; the caller's try/except
+    # in audit_append keeps the decision flowing either way.
     return os.path.join(AUDIT_DIR, "plow-audit.jsonl")
 
 
 def audit_append(record: dict):
     record.setdefault("ts", int(time.time()))
-    with open(_audit_path(), "a") as f:
-        f.write(json.dumps(record) + "\n")
+    try:
+        with open(_audit_path(), "a") as f:
+            f.write(json.dumps(record) + "\n")
+    except OSError:
+        # Never let an audit write take down a gate decision (fail-open on
+        # telemetry only; the decision itself already happened).
+        pass
 
 
 def audit_spent(venue_id: str, period_hours: int) -> float:
@@ -230,9 +253,14 @@ async def resolve_escalation(index: int, approve: bool) -> dict:
     rec["resolved"] = True
     rec["resolved_ts"] = int(time.time())
     rec["resolution"] = "APPROVED" if approve else "REJECTED"
-    with open(_audit_path(), "w") as f:
-        for r in records:
-            f.write(json.dumps(r) + "\n")
+    try:
+        with open(_audit_path(), "w") as f:
+            for r in records:
+                f.write(json.dumps(r) + "\n")
+    except OSError:
+        # Read-only deploy FS: the resolution is still returned; the audit
+        # rewrite is best-effort telemetry.
+        pass
     audit_append({"event": "escalation_resolved", "index": index, "decision": rec["resolution"], "venue_id": rec.get("venue_id"), "amount": rec.get("amount"), "intent_key": rec.get("intent_key")})
     if not approve:
         return {"ok": True, "decision": "REJECTED", "reason": "rejected by operator"}
